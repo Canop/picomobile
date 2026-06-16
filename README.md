@@ -1,6 +1,6 @@
 
 
-This repository contains the code of the Pico-Mobile as described in [https://dystroy.org/blog/pico-mobile](https://dystroy.org/blog/pico-mobile)
+This repository contains the code of the Pico-Mobile as described in [https://dystroy.org/blog/picomobile](https://dystroy.org/blog/picomobile)
 
 
 ![La Picon-Mobile](doc/picon-mobile.jpg)
