@@ -1,0 +1,36 @@
+[package]
+name = "picomobile-embedded"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+cortex-m-rt      = "0.7"
+cyw43     = { version = "0.7", path = "../../embassy/cyw43", features = ["log", "firmware-logs"] }
+cyw43-pio = { version = "0.10", path = "../../embassy/cyw43-pio" }    
+embassy-executor = { version = "0.10", features = ["platform-cortex-m", "executor-thread"] }
+embassy-futures  = "0.1"
+embassy-net = { version = "0.9", features = ["log", "tcp", "dhcpv4", "medium-ethernet", "proto-ipv4"] }
+embassy-rp       = { version = "0.10", features = ["time-driver", "critical-section-impl", "rp2040"] }
+embassy-sync     = { version = "0.8" }
+embassy-time     = { version = "0.5" }
+embassy-usb      = { version = "0.6", default-features = false }
+embassy-usb-logger = "0.6"     
+embedded-io-async = "0.7"
+log                = { version ="0.4", default-features = false }
+panic-halt = "1.0" 
+portable-atomic = { version = "1", features = ["critical-section"] }
+rp2040-hal = "0.12"
+static_cell      = "2"
+fixed = "1.28"
+
+[patch.crates-io]
+embassy-executor     = { path = "../../embassy/embassy-executor"}
+cyw43     = { path = "../../embassy/cyw43"}
+cyw43-pio = { path = "../../embassy/cyw43-pio" }    
+embassy-futures     = { path = "../../embassy/embassy-futures"}
+embassy-net     = { path = "../../embassy/embassy-net"}
+embassy-rp     = { path = "../../embassy/embassy-rp"}
+embassy-sync     = { path = "../../embassy/embassy-sync"}
+embassy-time     = { path = "../../embassy/embassy-time"}
+embassy-usb     = { path = "../../embassy/embassy-usb"}
+embassy-usb-logger     = { path = "../../embassy/embassy-usb-logger"}
