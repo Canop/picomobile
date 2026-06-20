@@ -148,8 +148,25 @@ function initializeKeyboard() {
     });
 }
 
+function initializeCam() {
+    let button = document.getElementById('cam-toggle');
+    let img = document.getElementById('cam-img');
+    function toggleCam() {
+        if (img.style.display === 'none') {
+            img.style.display = 'block';
+            button.textContent = 'Close Camera Stream';
+        } else {
+            img.style.display = 'none';
+            button.textContent = 'Open Camera Stream';
+        }
+    }
+    img.style.display = 'none';
+    button.addEventListener('click', toggleCam);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initializeButtons();
     initializeKeyboard();
+    initializeCam();
     repeatLoop();
 });
