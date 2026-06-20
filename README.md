@@ -9,8 +9,13 @@ This repository contains the code of the Pico-Mobile as described in [https://dy
 **Warning:** Below this point, this readme isn't up to date, the code changes too fast. But the code does do everything which is in the blog article (and much more, like camera control)
 
 TODO:
-[ ] backend command for the quit, integrated in build
-[ ] send the camera resolution (browser -> backend -> pico)
+
+* [x] arducam image flow shown in the browser (requires the pico to be powered by USB and off the Kitronik)
+* [ ] power everything from the Lego power pack (in progress)
+* [ ] rodent detection
+* [ ] backend command for the quit, integrated in build
+* [ ] send the camera resolution (browser -> backend -> pico)
+
 
 # Material (computers not included)
 
