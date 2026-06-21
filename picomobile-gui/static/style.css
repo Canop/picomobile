@@ -2,6 +2,7 @@ body {
     font-family: sans-serif;
     text-align: center;
     margin-top: 2rem;
+    background-color: #f0f0f0;
 }
 
 .controller {
@@ -17,10 +18,17 @@ body {
     gap: 1rem;
     align-items: center;
 }
-
 .steering {
     display: flex;
     gap: 0.5rem;
+}
+.driving, .admin, .cam {
+    border: 1px solid #ccc9;
+    padding: 1rem;
+    background-color: #fff;
+}
+.cam img {
+    margin: 10px;
 }
 
 button {

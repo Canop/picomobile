@@ -154,14 +154,16 @@ function initializeCam() {
     function toggleCam() {
         if (img.style.display === 'none') {
             img.style.display = 'block';
+            img.src = "/api/video";
             button.textContent = 'Close Camera Stream';
         } else {
             img.style.display = 'none';
+            img.src = "";
             button.textContent = 'Open Camera Stream';
         }
     }
-    img.style.display = 'none';
     button.addEventListener('click', toggleCam);
+    toggleCam();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
