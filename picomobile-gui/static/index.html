@@ -10,15 +10,26 @@
 <h1>La PicoMobile</h1>
 
 <div class="controller">
-    <button data-action="forward">Forward ↑</button>
 
-    <div class="steering">
-        <button data-action="left">← Left</button>
-        <button data-action="right">Right →</button>
+    <div class=admin>
+        <button data-action="toggle-led">Toggle LED</button>
+        <button data-action="quit">Reset Pico</button>
     </div>
 
-    <button data-action="backward">Backward ↓</button>
-    <button data-action="toggle-led">Toggle LED</button>
+    <div class=cam>
+        <img id=cam-img src="/api/video">
+        <button id=cam-toggle></button>
+    </div>
+
+    <div class="driving">
+        <button data-action="forward">↑</button>
+        <div class="steering">
+            <button data-action="left">←</button>
+            <button data-action="right">→</button>
+        </div>
+        <button data-action="backward">↓</button>
+    </div>
+
 </div>
 
 <script src="app.js"></script>
