@@ -2,13 +2,17 @@ mod args;
 mod cam_capture;
 mod cam_tunnel;
 mod command_tunnel;
+mod move_detector;
 mod pico_ports;
+mod sound;
 
 pub use {
     args::*,
     cam_capture::*,
     command_tunnel::*,
+    move_detector::*,
     pico_ports::*,
+    sound::*,
 };
 
 use {
@@ -21,8 +25,8 @@ use {
             IntoResponse,
             Response,
         },
-        routing::post,
         routing::get,
+        routing::post,
     },
     clap::Parser,
     //futures_util::stream::Stream,
@@ -42,6 +46,8 @@ use {
     },
     tower_http::services::ServeDir,
 };
+
+pub const START_MOVE_DETECTOR: bool = true;
 
 /// Ports used for communication with the Pico
 pub const PICO_PORTS: PicoPorts = PicoPorts {
@@ -87,15 +93,31 @@ async fn serve(
     // command channel
     let (command_tx, command_rx) = mpsc::channel::<String>(8);
     // video channel
-    let video_tx = broadcast::Sender::<Arc<Vec<u8>>>::new(16);
+    let video_tx = broadcast::Sender::<Arc<Vec<u8>>>::new(64);
+    // move detection channel
+    let (detection_tx, detection_rx) = mpsc::channel::<DetectionEvent>(1);
 
     let car_commands_addr = format!("{car_ip}:{}", PICO_PORTS.command_port);
     tokio::spawn(tunnel_commands_task(car_commands_addr, command_rx));
 
-    let car_camera_addr = format!("{car_ip}:{}", PICO_PORTS.image_port);
-    tokio::spawn(cam_tunnel::camera_fetcher_task(car_camera_addr, video_tx.clone()));
+    if START_MOVE_DETECTOR {
+        let video_rx = video_tx.subscribe();
+        tokio::spawn(move_detector::move_detector_task(video_rx, detection_tx));
+    }
 
-    let state = AppState { command_tx, video_tx };
+    tokio::spawn(sound::sound_player_task(detection_rx));
+
+    let car_camera_addr = format!("{car_ip}:{}", PICO_PORTS.image_port);
+    tokio::spawn(cam_tunnel::camera_fetcher_task(
+        car_camera_addr,
+        video_tx.clone(),
+        if START_MOVE_DETECTOR { 2 } else { 1 },
+    ));
+
+    let state = AppState {
+        command_tx,
+        video_tx,
+    };
 
     let app = Router::new()
         .route("/api/command", post(send_command))
@@ -136,24 +158,20 @@ async fn video_stream(State(state): State<AppState>) -> impl IntoResponse {
     let rx = state.video_tx.subscribe();
     let broadcast_stream = BroadcastStream::new(rx);
 
-    // Transformation du broadcast en flux de chunks HTTP Multipart MJPEG
-    let mjpeg_stream = broadcast_stream.map(|result| {
-        match result {
-            Ok(frame) => {
-                let chunk = format!(
-                    "--boundary\r\nContent-Type: image/jpeg\r\nContent-Length: {}\r\n\r\n",
-                    frame.len()
-                );
-                let mut data = chunk.into_bytes();
-                data.extend_from_slice(&frame);
-                data.extend_from_slice(b"\r\n");
-                Ok::<_, std::convert::Infallible>(axum::body::Bytes::from(data))
-            }
-            Err(BroadcastStreamRecvError::Lagged(_)) => {
-                // Le client est trop lent, on ignore les frames perdues
-                Ok(axum::body::Bytes::new())
-            }
+    let mjpeg_stream = broadcast_stream.filter_map(|result| match result {
+        Ok(frame) => {
+            let chunk = format!(
+                "--boundary\r\nContent-Type: image/jpeg\r\nContent-Length: {}\r\n\r\n",
+                frame.len()
+            );
+            let mut data = chunk.into_bytes();
+            data.extend_from_slice(&frame);
+            data.extend_from_slice(b"\r\n");
+            Some(Ok::<_, std::convert::Infallible>(axum::body::Bytes::from(
+                data,
+            )))
         }
+        Err(BroadcastStreamRecvError::Lagged(_)) => None,
     });
 
     Response::builder()
