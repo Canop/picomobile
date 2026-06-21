@@ -5,6 +5,8 @@ This repository contains the code of the Pico-Mobile as described in [https://dy
 
 ![La Picon-Mobile](doc/picon-mobile.jpg)
 
+<<<<<<< HEAD
+=======
 
 **Warning:** Below this point, this readme isn't up to date, the code changes too fast. But the code does do everything which is in the blog article (and much more, like camera control)
 
@@ -15,7 +17,11 @@ TODO:
 * [ ] rodent detection
 * [ ] backend command for the quit, integrated in build
 * [ ] send the camera resolution (browser -> backend -> pico)
+>>>>>>> origin/main
 
+TODO:
+[ ] backend command for the quit
+[ ] send the camera resolution (browser -> backend -> pico)
 
 # Material (computers not included)
 
@@ -98,7 +104,15 @@ On launching, the Pico registers and dumps its IP:
 
 Connect with `nc`, eg `nc 192.168.1.24 1234` and send commands finished by enter
 
+<<<<<<< HEAD
+![repl](pico-wifi-repl.png)
+
+Commands:
+* blink n times, eg `b 5`
+* run the Lego motor n milliseconds, eg `g 150` or `g -2000`
+=======
 * toggle the led: `led`
+>>>>>>> origin/main
 * reset the Pico (for another install) with `q`
 
 To kill tio, do `ctrl-T Q`.
@@ -106,6 +120,8 @@ To kill tio, do `ctrl-T Q`.
 It's possible to disconnect the USB cable and put the Lego power pack to ON.
 After a few seconds for the WIFI to connect (there's no log as it goes through USB), you can command the Pico with `nc` and make it blink.
 
+<<<<<<< HEAD
+=======
 # picomobile-gui
 
 The picomobile-gui program launches a serve which allows web-based control of the Pico:
@@ -113,6 +129,7 @@ The picomobile-gui program launches a serve which allows web-based control of th
 - doing a reset (same than using netcat to send `q`)
 - viewing the camera image flow
 
+>>>>>>> origin/main
 # Reset the Pico for new installation
 
 Using `nc` send the command `q` (or `quit`).

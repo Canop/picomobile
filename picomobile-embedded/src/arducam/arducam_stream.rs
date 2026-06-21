@@ -93,6 +93,7 @@ pub async fn camera_streaming_task(
                     network_error = true;
                     break;
                 }
+                info!("Sent {} bytes to client.", to_send);
 
                 total_bytes -= to_read as u32;
             }
