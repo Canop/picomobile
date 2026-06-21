@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 
+mod arducam;
 mod command;
 mod driving;
 mod motor;
@@ -9,6 +10,7 @@ mod slice_writer;
 mod utils;
 
 pub use {
+    arducam::*,
     command::*,
     driving::*,
     motor::*,
@@ -47,9 +49,14 @@ use {
         peripherals::{
             DMA_CH0,
             DMA_CH1,
+            DMA_CH2,
+            DMA_CH3,
+            DMA_CH4,
             PIO0,
             USB,
+            I2C0,
         },
+        i2c,
         pio::{
             InterruptHandler,
             Pio,
@@ -81,9 +88,22 @@ use {
 
 bind_interrupts!(struct Irqs {
     PIO0_IRQ_0 => InterruptHandler<PIO0>;
-    DMA_IRQ_0 => dma::InterruptHandler<DMA_CH0>, dma::InterruptHandler<DMA_CH1>;
+    // Tous les canaux DMA du RP2040 partagent la même interruption matérielle (DMA_IRQ_0)
+    DMA_IRQ_0 => dma::InterruptHandler<DMA_CH0>,
+                 dma::InterruptHandler<DMA_CH1>,
+                 dma::InterruptHandler<DMA_CH2>,
+                 dma::InterruptHandler<DMA_CH3>,
+                 dma::InterruptHandler<DMA_CH4>;
     USBCTRL_IRQ => UsbIrqHandler<USB>;
+    // Gestionnaires d'interruptions propres aux périphériques I2C et SPI
+    I2C0_IRQ => i2c::InterruptHandler<I2C0>;
 });
+
+// bind_interrupts!(struct Irqs {
+//     PIO0_IRQ_0 => InterruptHandler<PIO0>;
+//     DMA_IRQ_0 => dma::InterruptHandler<DMA_CH0>, dma::InterruptHandler<DMA_CH1>;
+//     USBCTRL_IRQ => UsbIrqHandler<USB>;
+// });
 
 static COMMAND_CHANNEL: Channel<CriticalSectionRawMutex, DrivingCommand, 2> = Channel::new();
 
@@ -141,7 +161,7 @@ async fn logger_task(driver: UsbDriver<'static, USB>) {
 async fn tick() {
     let mut i = 0;
     loop {
-        Timer::after_millis(10_000).await;
+        Timer::after_millis(60_000).await;
         i += 1;
         log::info!("tick {i}");
     }
@@ -177,6 +197,31 @@ async fn main(spawner: Spawner) {
         channel_b: channel_b.unwrap(),
     };
 
+    // Configuration of the Arducam (pins from GP16 to GP21)
+    let i2c_config = embassy_rp::i2c::Config::default();
+    let i2c0 = embassy_rp::i2c::I2c::new_async(
+        p.I2C0,
+        p.PIN_21,
+        p.PIN_20,
+        Irqs,
+        i2c_config,
+    );
+
+    let mut spi_config = embassy_rp::spi::Config::default();
+    spi_config.frequency = 8_000_000; // 8 MHz pour un vidage rapide de la FIFO
+    let spi0 = embassy_rp::spi::Spi::new(
+        p.SPI0,
+        p.PIN_18,
+        p.PIN_19,
+        p.PIN_16,
+        p.DMA_CH3,
+        p.DMA_CH4,
+        Irqs,
+        spi_config,
+    );
+    let cs_pin = Output::new(p.PIN_17, Level::High);
+    let arducam = Arducam::new(i2c0, spi0, cs_pin);
+
     spawner.spawn(expect(driving_task(motor, servo)).await);
     spawner.spawn(expect(tick()).await);
 
@@ -189,7 +234,7 @@ async fn main(spawner: Spawner) {
     let pwr = Output::new(p.PIN_23, Level::Low);
     let cs = Output::new(p.PIN_25, Level::High);
     let mut pio = Pio::new(p.PIO0, Irqs);
-    let spi = PioSpi::new(
+    let pio_spi = PioSpi::new(
         &mut pio.common,
         pio.sm0,
         DEFAULT_CLOCK_DIVIDER,
@@ -203,8 +248,9 @@ async fn main(spawner: Spawner) {
 
     static STATE: StaticCell<cyw43::State> = StaticCell::new();
     let state = STATE.init(cyw43::State::new());
-    let (net_device, mut control, runner) = cyw43::new(state, pwr, spi, fw, nvram).await;
+    let (net_device, mut control, runner) = cyw43::new(state, pwr, pio_spi, fw, nvram).await;
     spawner.spawn(expect(cyw43_task(runner)).await);
+
 
     control.init(clm).await;
     control
@@ -226,6 +272,8 @@ async fn main(spawner: Spawner) {
     );
 
     spawner.spawn(expect(net_task(runner)).await);
+
+    spawner.spawn(expect(camera_streaming_task(stack, arducam)).await);
 
     while let Err(err) = control
         .join(WIFI_NETWORK, JoinOptions::new(WIFI_PASSWORD.as_bytes()))
@@ -261,7 +309,7 @@ async fn main(spawner: Spawner) {
             continue;
         }
 
-        info!("Received connection from {:?}", socket.remote_endpoint());
+        info!("Received driving connection from {:?}", socket.remote_endpoint());
         control.gpio_set(0, true).await;
 
         loop {
@@ -287,6 +335,7 @@ async fn main(spawner: Spawner) {
 
             let mut output = SliceWriter::new(&mut buf);
             let mut close = false;
+            let mut quit = false;
             match cmd {
                 Ok(Command::ToggleLed) => {
                     if led.is_set_high() {
@@ -306,34 +355,38 @@ async fn main(spawner: Spawner) {
                 }
                 Ok(Command::Quit) => {
                     let _ = write!(output, "-> Shutting down...");
-                    // we blink the LED a few times to give the user a visual feedback that the
-                    // command was received, and so that the log can reach tio before the reset
-                    // happens
-                    for _ in 0..5 {
-                        led.set_high();
-                        Timer::after_millis(100).await;
-                        led.set_low();
-                        Timer::after_millis(100).await;
-                    }
-                    reset_to_usb_boot(0, 0);
+                    quit = true;
                 }
                 Err(e) => {
                     let _ = write!(output, "-> ERROR: {}", e);
                 }
             }
-
             match socket.write_all(output.as_bytes()).await {
                 Ok(()) => {
                     info!("Answered '{}'", output.as_str());
                 }
                 Err(e) => {
                     warn!("write error: {:?}", e);
-                    break;
+                    if !quit {
+                        break;
+                    }
                 }
             };
             if close {
                 info!("Closing connection");
                 break;
+            }
+            if quit {
+                // we blink the LED a few times to give the user a visual feedback that the
+                // command was received, and so that the log can reach tio before the reset
+                // happens
+                for _ in 0..5 {
+                    led.set_high();
+                    Timer::after_millis(200).await;
+                    led.set_low();
+                    Timer::after_millis(200).await;
+                }
+                reset_to_usb_boot(0, 0);
             }
         }
         Timer::after_millis(10).await;
