@@ -1,3 +1,4 @@
+#[allow(dead_code, nonstandard_style)]
 pub const OV2640_QVGA: &[(u8, u8)] = &[
     (0xff, 0x0),
     (0x2c, 0xff),
@@ -192,9 +193,9 @@ pub const OV2640_QVGA: &[(u8, u8)] = &[
     (0xd7, 0x3),
     (0xe0, 0x0),
     (0x5, 0x0),
-    (0xff, 0xff),
 ];
 
+#[allow(dead_code, nonstandard_style)]
 pub const OV2640_JPEG_INIT: &[(u8, u8)] = &[
     (0xff, 0x00),
     (0x2c, 0xff),
@@ -386,9 +387,9 @@ pub const OV2640_JPEG_INIT: &[(u8, u8)] = &[
     (0x5A, 0x2c),
     (0x5b, 0x24),
     (0x5c, 0x00),
-    (0xff, 0xff),
 ];
 
+#[allow(dead_code, nonstandard_style)]
 pub const OV2640_YUV422: &[(u8, u8)] = &[
     (0xFF, 0x00),
     (0x05, 0x00),
@@ -399,9 +400,9 @@ pub const OV2640_YUV422: &[(u8, u8)] = &[
     (0x3C, 0x40),
     (0xe1, 0x77),
     (0x00, 0x00),
-    (0xff, 0xff),
 ];
 
+#[allow(dead_code, nonstandard_style)]
 pub const OV2640_JPEG: &[(u8, u8)] = &[
     (0xe0, 0x14),
     (0xe1, 0x77),
@@ -411,10 +412,10 @@ pub const OV2640_JPEG: &[(u8, u8)] = &[
     (0xe0, 0x00),
     (0xFF, 0x01),
     (0x04, 0x08),
-    (0xff, 0xff),
 ];
 
 /* JPG 160x120 */
+#[allow(dead_code, nonstandard_style)]
 pub const OV2640_160x120_JPEG: &[(u8, u8)] = &[
     (0xff, 0x01),
     (0x12, 0x40),
@@ -455,11 +456,10 @@ pub const OV2640_160x120_JPEG: &[(u8, u8)] = &[
     (0x5b, 0x1e),
     (0x5c, 0x00),
     (0xe0, 0x00),
-    (0xff, 0xff),
 ];
 
 /* JPG, 0x176x144 */
-
+#[allow(dead_code, nonstandard_style)]
 pub const OV2640_176x144_JPEG: &[(u8, u8)] = &[
     (0xff, 0x01),
     (0x12, 0x40),
@@ -500,11 +500,10 @@ pub const OV2640_176x144_JPEG: &[(u8, u8)] = &[
     (0x5b, 0x24),
     (0x5c, 0x00),
     (0xe0, 0x00),
-    (0xff, 0xff),
 ];
 
 /* JPG 320x240 */
-
+#[allow(dead_code, nonstandard_style)]
 pub const OV2640_320x240_JPEG: &[(u8, u8)] = &[
     (0xff, 0x01),
     (0x12, 0x40),
@@ -545,11 +544,10 @@ pub const OV2640_320x240_JPEG: &[(u8, u8)] = &[
     (0x5b, 0x3c),
     (0x5c, 0x00),
     (0xe0, 0x00),
-    (0xff, 0xff),
 ];
 
 /* JPG 352x288 */
-
+#[allow(dead_code, nonstandard_style)]
 pub const OV2640_352x288_JPEG: &[(u8, u8)] = &[
     (0xff, 0x01),
     (0x12, 0x40),
@@ -590,10 +588,10 @@ pub const OV2640_352x288_JPEG: &[(u8, u8)] = &[
     (0x5b, 0x48),
     (0x5c, 0x00),
     (0xe0, 0x00),
-    (0xff, 0xff),
 ];
 
 /* JPG 640x480 */
+#[allow(dead_code, nonstandard_style)]
 pub const OV2640_640x480_JPEG: &[(u8, u8)] = &[
     (0xff, 0x01),
     (0x11, 0x01),
@@ -635,10 +633,10 @@ pub const OV2640_640x480_JPEG: &[(u8, u8)] = &[
     (0x5c, 0x00),
     (0xd3, 0x04),
     (0xe0, 0x00),
-    (0xff, 0xff),
 ];
 
 /* JPG 800x600 */
+#[allow(dead_code, nonstandard_style)]
 pub const OV2640_800x600_JPEG: &[(u8, u8)] = &[
     (0xff, 0x01),
     (0x11, 0x01),
@@ -680,10 +678,10 @@ pub const OV2640_800x600_JPEG: &[(u8, u8)] = &[
     (0x5c, 0x00),
     (0xd3, 0x02),
     (0xe0, 0x00),
-    (0xff, 0xff),
 ];
 
 /* JPG 1024x768 */
+#[allow(dead_code, nonstandard_style)]
 pub const OV2640_1024x768_JPEG: &[(u8, u8)] = &[
     (0xff, 0x01),
     (0x11, 0x01),
@@ -723,10 +721,10 @@ pub const OV2640_1024x768_JPEG: &[(u8, u8)] = &[
     (0x5b, 0xC0),
     (0x5c, 0x01),
     (0xd3, 0x02),
-    (0xff, 0xff),
 ];
 
 /* JPG 1280x1024 */
+#[allow(dead_code, nonstandard_style)]
 pub const OV2640_1280x1024_JPEG: &[(u8, u8)] = &[
     (0xff, 0x01),
     (0x11, 0x01),
@@ -768,10 +766,10 @@ pub const OV2640_1280x1024_JPEG: &[(u8, u8)] = &[
     (0x5c, 0x01),
     (0xd3, 0x02),
     (0xe0, 0x00),
-    (0xff, 0xff),
 ];
 
 /* JPG 1600x1200 */
+#[allow(dead_code, nonstandard_style)]
 pub const OV2640_1600x1200_JPEG: &[(u8, u8)] = &[
     (0xff, 0x01),
     (0x11, 0x01),
@@ -813,9 +811,9 @@ pub const OV2640_1600x1200_JPEG: &[(u8, u8)] = &[
     (0x5c, 0x05), //bit2->1;bit[1:0]->1
     (0xd3, 0x02),
     (0xe0, 0x00),
-    (0xff, 0xff),
 ];
 
+#[allow(dead_code, nonstandard_style)]
 pub const OV2640_SVGA: &[(u8, u8)] = &[
     (0xff, 0x01),
     (0x12, 0x80),
@@ -994,8 +992,9 @@ pub const OV2640_SVGA: &[(u8, u8)] = &[
     (0xe0, 0x00),
     (0xdd, 0x7f),
     (0x05, 0x00),
-    (0xff, 0xff),
 ];
+
+#[allow(dead_code, nonstandard_style)]
 pub const OV2640_640x480_JPEG2: &[(u8, u8)] = &[
     (0xff, 0x01), //001
     (0x11, 0x01), //002
@@ -1036,5 +1035,4 @@ pub const OV2640_640x480_JPEG2: &[(u8, u8)] = &[
     (0x5b, 0x78), //037
     (0x5c, 0x00), //038
     (0xd3, 0x04), //039
-    (0xe0, 0x00), //040
 ];

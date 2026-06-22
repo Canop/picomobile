@@ -20,6 +20,9 @@ use {
         },
     },
     embassy_time::Timer,
+    log::{
+        info,
+    },
     ov2640_registers::*,
 };
 
@@ -47,13 +50,13 @@ impl<'d> Arducam<'d> {
     }
 
     pub async fn init(&mut self) -> Result<(), &'static str> {
-        // 1. SPI bus check: write 0x55 to register 0x00 and read it back
+        // SPI bus check: write 0x55 to register 0x00 and read it back
         self.write_spi_reg(0x00, 0x55).await;
         if self.read_spi_reg(0x00).await != 0x55 {
             return Err("Arducam SPI bus check failed!");
         }
 
-        // 2. Initialization of sensor OV2640 via I2C
+        // Initialization of sensor OV2640 via I2C
         // Default I2C address for OV2640 is 0x30 (7-bit address)
         const OV2640_ADDR: u16 = 0x30;
 
@@ -68,9 +71,17 @@ impl<'d> Arducam<'d> {
             .map_err(|_| "I2C Error")?; // Reset
         Timer::after_millis(100).await;
 
-        //let jpeg_init_sequence = OV2640_160x120_JPEG;
-        let jpeg_init_sequence = OV2640_640x480_JPEG;
+        // Init to JPEG
+        //for &(reg, val) in OV2640_JPEG_INIT {
+        //    self.i2c
+        //        .write_async(OV2640_ADDR, [reg, val])
+        //        .await
+        //        .map_err(|_| "I2C JPEG Init Error")?;
+        //}
 
+        // Set the right resolution
+        let jpeg_init_sequence = OV2640_160x120_JPEG;
+        //let jpeg_init_sequence = OV2640_640x480_JPEG;
         for &(reg, val) in jpeg_init_sequence {
             self.i2c
                 .write_async(OV2640_ADDR, [reg, val])
@@ -106,7 +117,7 @@ impl<'d> Arducam<'d> {
         reg: u8,
     ) -> u8 {
         let mut buf = [reg & 0x7F, 0x00]; // 1 byte for the register address (bit 7 = 0 for read),
-                                          // 1 byte for the value to read
+        // 1 byte for the value to read
         self.cs.set_low();
         let _ = self.spi.transfer_in_place(&mut buf).await;
         self.cs.set_high();

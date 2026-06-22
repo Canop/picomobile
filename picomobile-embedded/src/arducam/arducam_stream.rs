@@ -11,6 +11,8 @@ use {
     },
 };
 
+const WAIT_BETWEEN_FRAMES_MS: u64 = 100;
+
 #[embassy_executor::task]
 pub async fn camera_streaming_task(
     stack: Stack<'static>, // net stack
@@ -64,7 +66,7 @@ pub async fn camera_streaming_task(
             // it in chunks and send the chunks over TCP (stripping the 0xA5
             // bytes at the end).
             let mut network_error = false;
-            while total_bytes > 0  && !eoi_found {
+            while total_bytes > 0 && !eoi_found {
                 let to_read = core::cmp::min(total_bytes, chunk_buffer.len() as u32) as usize;
 
                 // Reading the chunk from SPI into the temporary buffer
@@ -74,6 +76,7 @@ pub async fn camera_streaming_task(
                     .await
                     .is_err()
                 {
+                    warn!("SPI read error during image transfer.");
                     network_error = true;
                     break;
                 }
@@ -88,12 +91,13 @@ pub async fn camera_streaming_task(
                 }
 
                 // Push the chunk to the TCP socket
-                if socket.write_all(&chunk_buffer[..to_send]).await.is_err() {
-                    warn!("Client disconnected during image transfer.");
+                if let Err(e) = socket.write_all(&chunk_buffer[..to_send]).await {
+                    warn!("Client disconnected during image transfer: {:?}", e);
+                    warn!("to_sent: {}, to_read: {}, total_bytes: {}", to_send, to_read, total_bytes);
                     network_error = true;
                     break;
                 }
-                info!("Sent {} bytes to client.", to_send);
+                //info!("Sent {} bytes to client.", to_send);
 
                 total_bytes -= to_read as u32;
             }
@@ -106,7 +110,7 @@ pub async fn camera_streaming_task(
             }
 
             // Timerate reduction
-            Timer::after_millis(66).await; // ~15 images par seconde
+            Timer::after_millis(WAIT_BETWEEN_FRAMES_MS).await;
         }
 
         socket.close();
