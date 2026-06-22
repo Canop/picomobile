@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>La PicoMobile</title>
-    <link rel="stylesheet" href="style.css?v=20260621-1">
+    <title>La Picomobile</title>
+    <link rel="stylesheet" href="style.css?v=20260622-2">
 </head>
 <body>
 
-<h1>La PicoMobile</h1>
+<h1>La Picomobile</h1>
 
 <div class="controller">
 
@@ -16,9 +16,18 @@
         <button data-action="quit">Reset Pico</button>
     </div>
 
+
     <div class=cam>
         <img id=cam-img>
         <button id=cam-toggle></button>
+        <div id="motion-config">
+            <h3>Motion detection</h3>
+            <label><input type="checkbox" id="enable-motion"> Enable</label>
+            <label><input type="checkbox" id="sound-on-motion"> Sound</label>
+            <label><input type="checkbox" id="save-motion-events"> Save Events</label>
+            <button id="motion-config-save">Apply</button>
+            <span id="motion-config-status"></span>
+        </div>
     </div>
 
     <div class="driving">
@@ -32,7 +41,7 @@
 
 </div>
 
-<script src="app.js?v=20260621-3"></script>
+<script src="app.js?v=20260622-2"></script>
 
 </body>
 </html>

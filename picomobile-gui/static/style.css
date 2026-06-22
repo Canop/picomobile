@@ -30,10 +30,38 @@ body {
 .cam img {
     margin: 10px;
 }
-
+#motion-config {
+    border: 1px solid #ccc9;
+    padding: 1rem;
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    align-items: flex-start;
+    margin: 10px;
+}
+#motion-config h3 {
+    margin: 0 0 0.2rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+#motion-config label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.95rem;
+    cursor: pointer;
+}
+#motion-config-status {
+    font-size: 0.85rem;
+    color: green;
+}
 button {
     min-width: 120px;
     min-height: 60px;
     font-size: 1.1rem;
     cursor: pointer;
+}
+.cam button {
+    margin: 10px;
 }

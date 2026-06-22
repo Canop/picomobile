@@ -1,15 +1,14 @@
 use {
     crate::*,
-    tokio::sync::{
-        broadcast::{
-            self,
-            error::RecvError,
-        },
+    tokio::sync::broadcast::{
+        self,
+        error::RecvError,
     },
 };
 
 pub async fn sound_player_task(
-    mut tx: broadcast::Receiver<DetectionEvent>,
+    mut event_rx: broadcast::Receiver<DetectionEvent>,
+    config_rx: watch::Receiver<MotionDetectionConfig>,
 ) {
     eprintln!("Sound player task started.");
     let ps = PlaySoundCommand {
@@ -18,8 +17,13 @@ pub async fn sound_player_task(
         volume: Volume::new(100), // 80% volume
     };
     loop {
-        match tx.recv().await {
+        match event_rx.recv().await {
             Ok(_) => {
+                let config = *config_rx.borrow();
+                if !config.sound_on_motion {
+                    eprintln!("Motion event detected, but sound playback is disabled. Skipping.");
+                    continue;
+                }
                 match play_sound(&ps).await {
                     Ok(()) => {}
                     Err(SoundError::Interrupted) => {

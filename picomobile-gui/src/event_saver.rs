@@ -8,7 +8,8 @@ use {
 };
 
 pub async fn event_saver_task(
-    mut tx: broadcast::Receiver<DetectionEvent>,
+    mut rx: broadcast::Receiver<DetectionEvent>,
+    config_rx: watch::Receiver<MotionDetectionConfig>,
 ) {
     let events_root = PathBuf::from("events");
     if !events_root.exists() {
@@ -18,8 +19,16 @@ pub async fn event_saver_task(
         }
     }
     loop {
-        match tx.recv().await {
+        match rx.recv().await {
             Ok(DetectionEvent { time, images }) => {
+                let config = *config_rx.borrow();
+                if !config.save_motion_events {
+                    eprintln!(
+                        "Motion event detected at {}, but saving is disabled. Skipping.",
+                        time
+                    );
+                    continue;
+                }
                 let time_str = time.to_string();
                 let event_dir = events_root.join(time_str);
                 if let Err(e) = tokio::fs::create_dir_all(&event_dir).await {

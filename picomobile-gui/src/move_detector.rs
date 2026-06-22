@@ -1,4 +1,5 @@
 use {
+    crate::*,
     image::GrayImage,
     jiff::Timestamp,
     std::{
@@ -9,9 +10,7 @@ use {
             Instant,
         },
     },
-    tokio::sync::{
-        broadcast,
-    },
+    tokio::sync::broadcast,
 };
 
 #[derive(Debug, Clone)]
@@ -27,9 +26,11 @@ const PIXEL_THRESHOLD: u8 = 25; // Minimum luminance change to count as change
 const MIN_TRIGGER_PERCENT: f32 = 0.1; // Minimum percentage of changed pixels to trigger detection
 const MAX_TRIGGER_PERCENT: f32 = 30.0; // Cap to ignore sudden lighting changes
 const MIN_KEEP_PERCENT: f32 = 0.05; // Minimum percentage to keep motion state active
+const MAX_EVENT_IMAGES: usize = 10; // Max images to store per event to limit memory usage
 
 pub async fn move_detector_task(
     mut rx: broadcast::Receiver<Arc<Vec<u8>>>,
+    config_rx: watch::Receiver<MotionDetectionConfig>,
     tx: broadcast::Sender<DetectionEvent>,
 ) {
     eprintln!("Move detector task started.");
@@ -42,6 +43,13 @@ pub async fn move_detector_task(
     loop {
         match rx.recv().await {
             Ok(jpeg_bytes) => {
+                let config = *config_rx.borrow();
+                if !config.enable_motion_detection {
+                    history.clear();
+                    frame_count = 0;
+                    continue;
+                }
+
                 let now = Instant::now();
 
                 // Requirement: Handle stream gaps and restarts.
@@ -115,7 +123,9 @@ pub async fn move_detector_task(
                 match event.take() {
                     Some(mut e) => {
                         if change_percent < MIN_KEEP_PERCENT {
-                            eprintln!("Move detector: motion ended (change = {change_percent:.2}%)");
+                            eprintln!(
+                                "Move detector: motion ended (change = {change_percent:.2}%)"
+                            );
                             match tx.send(e) {
                                 Ok(_) => {}
                                 Err(_) => {
@@ -124,8 +134,12 @@ pub async fn move_detector_task(
                                 }
                             }
                         } else {
-                            eprintln!("Move detector: motion ongoing (change = {change_percent:.2}%)");
-                            e.images.push(jpeg_bytes.clone());
+                            eprintln!(
+                                "Move detector: motion ongoing (change = {change_percent:.2}%)"
+                            );
+                            if e.images.len() < MAX_EVENT_IMAGES {
+                                e.images.push(jpeg_bytes.clone());
+                            }
                             event = Some(e);
                         }
                     }
@@ -139,7 +153,9 @@ pub async fn move_detector_task(
                                     "Move detector: change = {change_percent:.2}% (ignored, too high)"
                                 );
                             } else {
-                                eprintln!("Move detector: motion started (change = {change_percent:.2}%)");
+                                eprintln!(
+                                    "Move detector: motion started (change = {change_percent:.2}%)"
+                                );
                                 event = Some(DetectionEvent {
                                     time: Timestamp::now(),
                                     images: vec![jpeg_bytes.clone()],
