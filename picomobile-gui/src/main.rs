@@ -2,13 +2,21 @@ mod args;
 mod cam_capture;
 mod cam_tunnel;
 mod command_tunnel;
+mod config;
+mod event_saver;
+mod move_detector;
 mod pico_ports;
+mod sound;
 
 pub use {
     args::*,
     cam_capture::*,
     command_tunnel::*,
+    config::*,
+    event_saver::*,
+    move_detector::*,
     pico_ports::*,
+    sound::*,
 };
 
 use {
@@ -21,8 +29,8 @@ use {
             IntoResponse,
             Response,
         },
-        routing::post,
         routing::get,
+        routing::post,
     },
     clap::Parser,
     //futures_util::stream::Stream,
@@ -34,6 +42,7 @@ use {
     tokio::sync::{
         broadcast,
         mpsc,
+        watch,
     },
     tokio_stream::StreamExt,
     tokio_stream::wrappers::{
@@ -51,6 +60,8 @@ pub const PICO_PORTS: PicoPorts = PicoPorts {
 
 #[derive(Clone)]
 struct AppState {
+    motion_config: Arc<tokio::sync::RwLock<MotionDetectionConfig>>,
+    motion_config_tx: watch::Sender<MotionDetectionConfig>,
     command_tx: mpsc::Sender<String>,
     video_tx: broadcast::Sender<Arc<Vec<u8>>>,
 }
@@ -84,22 +95,58 @@ async fn serve(
     car_ip: &str,
     gui_port: u16,
 ) {
+    let motion_config = MotionDetectionConfig::default();
+
     // command channel
     let (command_tx, command_rx) = mpsc::channel::<String>(8);
     // video channel
-    let video_tx = broadcast::Sender::<Arc<Vec<u8>>>::new(16);
+    let video_tx = broadcast::Sender::<Arc<Vec<u8>>>::new(64);
+    // motion detection events channel
+    let detection_tx = broadcast::Sender::<DetectionEvent>::new(1);
+    // motion detection config updates channel
+    let motion_config_tx = watch::Sender::<MotionDetectionConfig>::new(motion_config);
 
     let car_commands_addr = format!("{car_ip}:{}", PICO_PORTS.command_port);
     tokio::spawn(tunnel_commands_task(car_commands_addr, command_rx));
 
-    let car_camera_addr = format!("{car_ip}:{}", PICO_PORTS.image_port);
-    tokio::spawn(cam_tunnel::camera_fetcher_task(car_camera_addr, video_tx.clone()));
+    tokio::spawn(event_saver::event_saver_task(
+        detection_tx.subscribe(),
+        motion_config_tx.subscribe(),
+    ));
+    tokio::spawn(sound::sound_player_task(
+        detection_tx.subscribe(),
+        motion_config_tx.subscribe(),
+    ));
+    tokio::spawn(move_detector::move_detector_task(
+        video_tx.subscribe(),
+        motion_config_tx.subscribe(),
+        detection_tx,
+    ));
 
-    let state = AppState { command_tx, video_tx };
+    let car_camera_addr = format!("{car_ip}:{}", PICO_PORTS.image_port);
+
+    // Logic behind fetching image from the Pico is we do it only when the browser asks for
+    // images (and we don't want move detection to run when the browser is not connected, to avoid
+    // unnecessary load on the Pico).
+    let minimal_receivers_for_connection = 2; // move detector + at least one GUI client
+    tokio::spawn(cam_tunnel::camera_fetcher_task(
+        car_camera_addr,
+        video_tx.clone(),
+        minimal_receivers_for_connection,
+    ));
+
+    let state = AppState {
+        motion_config: Arc::new(tokio::sync::RwLock::new(motion_config)),
+        motion_config_tx,
+        command_tx,
+        video_tx,
+    };
 
     let app = Router::new()
         .route("/api/command", post(send_command))
         .route("/api/video", get(video_stream))
+        .route("/api/motion-config", get(get_motion_config))
+        .route("/api/motion-config", post(update_motion_config))
         .fallback_service(ServeDir::new("static"))
         .with_state(state);
 
@@ -132,28 +179,25 @@ async fn send_command(
     }
 }
 
+/// endpoint streaming MJPEG video from the car to the GUI
 async fn video_stream(State(state): State<AppState>) -> impl IntoResponse {
     let rx = state.video_tx.subscribe();
     let broadcast_stream = BroadcastStream::new(rx);
 
-    // Transformation du broadcast en flux de chunks HTTP Multipart MJPEG
-    let mjpeg_stream = broadcast_stream.map(|result| {
-        match result {
-            Ok(frame) => {
-                let chunk = format!(
-                    "--boundary\r\nContent-Type: image/jpeg\r\nContent-Length: {}\r\n\r\n",
-                    frame.len()
-                );
-                let mut data = chunk.into_bytes();
-                data.extend_from_slice(&frame);
-                data.extend_from_slice(b"\r\n");
-                Ok::<_, std::convert::Infallible>(axum::body::Bytes::from(data))
-            }
-            Err(BroadcastStreamRecvError::Lagged(_)) => {
-                // Le client est trop lent, on ignore les frames perdues
-                Ok(axum::body::Bytes::new())
-            }
+    let mjpeg_stream = broadcast_stream.filter_map(|result| match result {
+        Ok(frame) => {
+            let chunk = format!(
+                "--boundary\r\nContent-Type: image/jpeg\r\nContent-Length: {}\r\n\r\n",
+                frame.len()
+            );
+            let mut data = chunk.into_bytes();
+            data.extend_from_slice(&frame);
+            data.extend_from_slice(b"\r\n");
+            Some(Ok::<_, std::convert::Infallible>(axum::body::Bytes::from(
+                data,
+            )))
         }
+        Err(BroadcastStreamRecvError::Lagged(_)) => None,
     });
 
     Response::builder()
@@ -163,4 +207,27 @@ async fn video_stream(State(state): State<AppState>) -> impl IntoResponse {
         )
         .body(axum::body::Body::from_stream(mjpeg_stream))
         .unwrap()
+}
+
+async fn get_motion_config(State(state): State<AppState>) -> impl IntoResponse {
+    let config = state.motion_config.read().await;
+    Json(config.clone())
+}
+
+async fn update_motion_config(
+    State(state): State<AppState>,
+    Json(req): Json<UpdateMotionDetectionConfig>,
+) -> impl IntoResponse {
+    state.motion_config_tx.send_modify(|c| {
+        if let Some(v) = req.enable_motion_detection {
+            c.enable_motion_detection = v;
+        }
+        if let Some(v) = req.sound_on_motion {
+            c.sound_on_motion = v;
+        }
+        if let Some(v) = req.save_motion_events {
+            c.save_motion_events = v;
+        }
+    });
+    Json(state.motion_config_tx.borrow().clone())
 }

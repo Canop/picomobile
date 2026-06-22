@@ -6,8 +6,8 @@ use {
     },
     tokio::{
         io::BufReader,
-        time::sleep,
         sync::broadcast,
+        time::sleep,
     },
 };
 
@@ -15,15 +15,16 @@ use {
 pub async fn camera_fetcher_task(
     car_addr: String,
     tx: broadcast::Sender<Arc<Vec<u8>>>,
+    minimal_receivers_for_connection: usize,
 ) {
     let mut opt_stream = None; // TCP stream to the car's camera
 
     loop {
         // 1. If there's no client, we don't need to connect to the Pico
-        if tx.receiver_count() == 0 {
+        if tx.receiver_count() < minimal_receivers_for_connection {
             if opt_stream.is_some() {
-                eprintln!("No clients connected. Closing connection to Pico.");
-                opt_stream = None; // Ferme proprement le socket TCP
+                eprintln!("Not enough subscribers. Closing connection to Pico.");
+                opt_stream = None;
             }
             sleep(Duration::from_millis(500)).await;
             continue;
@@ -39,7 +40,7 @@ pub async fn camera_fetcher_task(
                 }
                 Err(e) => {
                     eprintln!("Failed to connect to car camera at {car_addr}: {e}");
-                    sleep(Duration::from_secs(1)).await; // Attente avant reconnexion
+                    sleep(Duration::from_secs(1)).await;
                     continue;
                 }
             }
@@ -47,16 +48,23 @@ pub async fn camera_fetcher_task(
 
         // 3. Read and broadcast images
         if let Some(ref mut stream) = opt_stream {
-            match tokio::time::timeout(Duration::from_secs(2), read_jpeg_from_stream(stream)).await {
+            match tokio::time::timeout(Duration::from_secs(2), read_jpeg_from_stream(stream)).await
+            {
                 Ok(Ok(frame)) => {
-                    let _ = tx.send(Arc::new(frame));
+                    if let Err(e) = tx.send(Arc::new(frame)) {
+                        eprintln!("Failed to broadcast frame: {e}");
+                    }
                 }
                 Ok(Err(e)) => {
-                    eprintln!("Pico camera connection lost (read error): {e}. Attempting to reconnect...");
+                    eprintln!(
+                        "Pico camera connection lost (read error): {e}. Attempting to reconnect..."
+                    );
                     opt_stream = None;
                 }
                 Err(_timeout_error) => {
-                    eprintln!("Pico camera connection timed out (no data received). Reconnecting...");
+                    eprintln!(
+                        "Pico camera connection timed out (no data received). Reconnecting..."
+                    );
                     opt_stream = None; // triggers reconnection
                 }
             }

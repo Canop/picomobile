@@ -151,13 +151,16 @@ function initializeKeyboard() {
 function initializeCam() {
     let button = document.getElementById('cam-toggle');
     let img = document.getElementById('cam-img');
+    let motion_config = document.getElementById('motion-config');
     function toggleCam() {
         if (img.style.display === 'none') {
             img.style.display = 'block';
+            motion_config.style.display = 'block';
             img.src = "/api/video";
             button.textContent = 'Close Camera Stream';
         } else {
             img.style.display = 'none';
+            motion_config.style.display = 'none';
             img.src = "";
             button.textContent = 'Open Camera Stream';
         }
@@ -166,9 +169,42 @@ function initializeCam() {
     toggleCam();
 }
 
+async function initializeMotionConfig() {
+    const res = await fetch('/api/motion-config');
+    const config = await res.json();
+    document.getElementById('enable-motion').checked = config.enable_motion_detection;
+    document.getElementById('sound-on-motion').checked = config.sound_on_motion;
+    document.getElementById('save-motion-events').checked = config.save_motion_events;
+
+    document.getElementById('motion-config-save').addEventListener('click', async () => {
+        const status = document.getElementById('motion-config-status');
+        const update = {
+            enable_motion_detection: document.getElementById('enable-motion').checked,
+            sound_on_motion: document.getElementById('sound-on-motion').checked,
+            save_motion_events: document.getElementById('save-motion-events').checked,
+        };
+        try {
+            const res = await fetch('/api/motion-config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(update),
+            });
+            if (res.ok) {
+                status.textContent = '✓';
+                setTimeout(() => status.textContent = '', 2000);
+            } else {
+                status.textContent = 'Erreur';
+            }
+        } catch (e) {
+            status.textContent = 'Erreur réseau';
+        }
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initializeButtons();
     initializeKeyboard();
     initializeCam();
+    initializeMotionConfig();
     repeatLoop();
 });
