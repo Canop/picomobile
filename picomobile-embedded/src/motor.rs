@@ -12,7 +12,10 @@ pub struct Motor<'d> {
     pub p2: Output<'d>,
 }
 impl<'d> Motor<'d> {
-    pub fn new(p1: Output<'d>, p2: Output<'d>) -> Self {
+    pub fn new(
+        p1: Output<'d>,
+        p2: Output<'d>,
+    ) -> Self {
         Self { p1, p2 }
     }
 
@@ -33,7 +36,10 @@ impl<'d> Motor<'d> {
         self.p2.set_low();
     }
 
-    pub async fn go_millis(&mut self, ms: i32) {
+    pub async fn go_millis(
+        &mut self,
+        ms: i32,
+    ) {
         if ms > 0 {
             self.forward().await;
             Timer::after(Duration::from_millis(ms as u64)).await;

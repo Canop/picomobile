@@ -49,7 +49,11 @@ impl<'d> LegoServo<'d> {
     ///
     /// * `dir`: The direction to turn (`Left` or `Right`).
     /// * `level`: The intensity of the turn from `0` (center) to `7` (maximum lock).
-    pub async fn set_position(&mut self, dir: SteeringDirection, level: u8) {
+    pub async fn set_position(
+        &mut self,
+        dir: SteeringDirection,
+        level: u8,
+    ) {
         // Clamp the input level to the maximum supported Lego steps
         let level = level.min(7);
 

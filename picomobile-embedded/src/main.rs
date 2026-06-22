@@ -25,18 +25,18 @@ use {
         str::from_utf8,
     },
     cyw43::{
-        aligned_bytes,
         JoinOptions,
+        aligned_bytes,
     },
     cyw43_pio::{
-        PioSpi,
         DEFAULT_CLOCK_DIVIDER,
+        PioSpi,
     },
     embassy_executor::Spawner,
     embassy_net::{
-        tcp::TcpSocket,
         Config,
         StackResources,
+        tcp::TcpSocket,
     },
     embassy_rp::{
         bind_interrupts,
@@ -46,17 +46,17 @@ use {
             Level,
             Output,
         },
+        i2c,
         peripherals::{
             DMA_CH0,
             DMA_CH1,
             DMA_CH2,
             DMA_CH3,
             DMA_CH4,
+            I2C0,
             PIO0,
             USB,
-            I2C0,
         },
-        i2c,
         pio::{
             InterruptHandler,
             Pio,
@@ -72,9 +72,9 @@ use {
         channel::Channel,
     },
     embassy_time::{
-        with_timeout,
         Duration,
         Timer,
+        with_timeout,
     },
     embedded_io_async::Write,
     log::{
@@ -113,7 +113,10 @@ const WIFI_PASSWORD: &str = env!("WIFI_PASSWORD");
 /// Execute driving commands coming on a channel, with a timeout to stop the
 /// motor if no command is received for a while.
 #[embassy_executor::task]
-async fn driving_task(mut motor: Motor<'static>, mut servo: LegoServo<'static>) {
+async fn driving_task(
+    mut motor: Motor<'static>,
+    mut servo: LegoServo<'static>,
+) {
     let timeout_duration = Duration::from_millis(200);
     loop {
         let cmd = with_timeout(timeout_duration, COMMAND_CHANNEL.receive()).await;
@@ -142,7 +145,7 @@ async fn cyw43_task(
         'static,
         cyw43::SpiBus<Output<'static>, PioSpi<'static, PIO0, 0>>,
         cyw43::Cyw43439,
-    >,
+    >
 ) -> ! {
     runner.run().await
 }
@@ -199,25 +202,12 @@ async fn main(spawner: Spawner) {
 
     // Configuration of the Arducam (pins from GP16 to GP21)
     let i2c_config = embassy_rp::i2c::Config::default();
-    let i2c0 = embassy_rp::i2c::I2c::new_async(
-        p.I2C0,
-        p.PIN_21,
-        p.PIN_20,
-        Irqs,
-        i2c_config,
-    );
+    let i2c0 = embassy_rp::i2c::I2c::new_async(p.I2C0, p.PIN_21, p.PIN_20, Irqs, i2c_config);
 
     let mut spi_config = embassy_rp::spi::Config::default();
     spi_config.frequency = 8_000_000; // 8 MHz pour un vidage rapide de la FIFO
     let spi0 = embassy_rp::spi::Spi::new(
-        p.SPI0,
-        p.PIN_18,
-        p.PIN_19,
-        p.PIN_16,
-        p.DMA_CH3,
-        p.DMA_CH4,
-        Irqs,
-        spi_config,
+        p.SPI0, p.PIN_18, p.PIN_19, p.PIN_16, p.DMA_CH3, p.DMA_CH4, Irqs, spi_config,
     );
     let cs_pin = Output::new(p.PIN_17, Level::High);
     let arducam = Arducam::new(i2c0, spi0, cs_pin);
@@ -250,7 +240,6 @@ async fn main(spawner: Spawner) {
     let state = STATE.init(cyw43::State::new());
     let (net_device, mut control, runner) = cyw43::new(state, pwr, pio_spi, fw, nvram).await;
     spawner.spawn(expect(cyw43_task(runner)).await);
-
 
     control.init(clm).await;
     control
@@ -309,7 +298,10 @@ async fn main(spawner: Spawner) {
             continue;
         }
 
-        info!("Received driving connection from {:?}", socket.remote_endpoint());
+        info!(
+            "Received driving connection from {:?}",
+            socket.remote_endpoint()
+        );
         control.gpio_set(0, true).await;
 
         loop {

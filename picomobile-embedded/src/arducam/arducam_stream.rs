@@ -45,7 +45,10 @@ pub async fn camera_streaming_task(
 
         loop {
             // 1. oder the Arducam to capture an image
-            arducam.trigger_capture().await;
+            if let Err(e) = arducam.trigger_capture().await {
+                log::error!("Error triggering Arducam capture: {e}");
+                break;
+            }
 
             // 2. Get the length of the image buffer
             // Note that this isn't the actual length of the JPEG image.
@@ -93,7 +96,10 @@ pub async fn camera_streaming_task(
                 // Push the chunk to the TCP socket
                 if let Err(e) = socket.write_all(&chunk_buffer[..to_send]).await {
                     warn!("Client disconnected during image transfer: {:?}", e);
-                    warn!("to_sent: {}, to_read: {}, total_bytes: {}", to_send, to_read, total_bytes);
+                    warn!(
+                        "to_sent: {}, to_read: {}, total_bytes: {}",
+                        to_send, to_read, total_bytes
+                    );
                     network_error = true;
                     break;
                 }

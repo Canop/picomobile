@@ -21,7 +21,10 @@ impl SliceWriter<'_> {
 }
 
 impl<'a> Write for SliceWriter<'a> {
-    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+    fn write_str(
+        &mut self,
+        s: &str,
+    ) -> core::fmt::Result {
         let bytes = s.as_bytes();
         if self.cursor + bytes.len() > self.buf.len() {
             return Err(core::fmt::Error);

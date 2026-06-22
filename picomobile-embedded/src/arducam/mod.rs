@@ -20,9 +20,6 @@ use {
         },
     },
     embassy_time::Timer,
-    log::{
-        info,
-    },
     ov2640_registers::*,
 };
 
@@ -35,6 +32,7 @@ pub const FIFO_START_MASK: u8 = 0x02; // Start capture
 pub const BURST_FIFO_READ: u8 = 0x3C; // Burst read command for FIFO
 
 pub struct Arducam<'d> {
+    address: u16, // I2C address of the Arducam (OV2640 sensor)
     i2c: I2c<'d, I2C0, Async>,
     spi: Spi<'d, SPI0, SpiAsync>, // real SPI, not the PIO version
     cs: Output<'d>,
@@ -46,7 +44,14 @@ impl<'d> Arducam<'d> {
         spi: Spi<'d, SPI0, SpiAsync>,
         cs: Output<'d>,
     ) -> Self {
-        Self { i2c, spi, cs }
+        // Default I2C address for OV2640 is 0x30 (7-bit address)
+        let address = 0x30;
+        Self {
+            address,
+            i2c,
+            spi,
+            cs,
+        }
     }
 
     pub async fn init(&mut self) -> Result<(), &'static str> {
@@ -57,51 +62,68 @@ impl<'d> Arducam<'d> {
         }
 
         // Initialization of sensor OV2640 via I2C
-        // Default I2C address for OV2640 is 0x30 (7-bit address)
-        const OV2640_ADDR: u16 = 0x30;
 
         // Select bank 1 and reset the sensor
-        self.i2c
-            .write_async(OV2640_ADDR, [0xFF, 0x01])
-            .await
-            .map_err(|_| "I2C Error")?; // Select bank 1
-        self.i2c
-            .write_async(OV2640_ADDR, [0x12, 0x80])
-            .await
-            .map_err(|_| "I2C Error")?; // Reset
+        self.write_reg(0xFF, 0x01).await?; // Select bank 1
+        self.write_reg(0x12, 0x80).await?; // Reset
         Timer::after_millis(100).await;
 
         // Init to JPEG
-        //for &(reg, val) in OV2640_JPEG_INIT {
-        //    self.i2c
-        //        .write_async(OV2640_ADDR, [reg, val])
-        //        .await
-        //        .map_err(|_| "I2C JPEG Init Error")?;
-        //}
+        self.write_regs(OV2640_JPEG_INIT).await?;
+        self.write_regs(OV2640_YUV422).await?;
+        self.write_regs(OV2640_JPEG).await?;
 
         // Set the right resolution
-        let jpeg_init_sequence = OV2640_160x120_JPEG;
-        //let jpeg_init_sequence = OV2640_640x480_JPEG;
-        for &(reg, val) in jpeg_init_sequence {
-            self.i2c
-                .write_async(OV2640_ADDR, [reg, val])
-                .await
-                .map_err(|_| "I2C Init Error")?;
-        }
+        //let jpeg_resolution_sequence = OV2640_160x120_JPEG;
+        //let jpeg_resolution_sequence = OV2640_320x240_JPEG; // bug
+        //let jpeg_resolution_sequence = OV2640_352x288_JPEG; // bug
+        let jpeg_resolution_sequence = OV2640_640x480_JPEG;
+        //let jpeg_resolution_sequence = OV2640_1024x768_JPEG;
+        self.write_regs(jpeg_resolution_sequence).await?;
 
         Ok(())
     }
 
-    pub async fn trigger_capture(&mut self) {
+    async fn write_reg(
+        &mut self,
+        reg: u8,
+        val: u8,
+    ) -> Result<(), &'static str> {
+        let address = self.address;
+        self.i2c
+            .write_async(address, [reg, val])
+            .await
+            .map_err(|_| "I2C Error")?;
+        Ok(())
+    }
+
+    async fn write_regs(
+        &mut self,
+        regs: &[(u8, u8)],
+    ) -> Result<(), &'static str> {
+        for &(reg, val) in regs {
+            self.write_reg(reg, val).await?;
+        }
+        Ok(())
+    }
+
+    pub async fn trigger_capture(&mut self) -> Result<(), &'static str> {
         self.write_spi_reg(ARDUCHIP_FIFO, FIFO_CLEAR_MASK).await;
         self.write_spi_reg(ARDUCHIP_FIFO, FIFO_START_MASK).await;
+        let mut timeout_counter = 0;
         loop {
             let status = self.read_spi_reg(ARDUCHIP_TRIG).await;
             if (status & CAP_DONE_MASK) != 0 {
                 break;
             }
-            Timer::after_millis(5).await; // Évite de saturer le CPU
+            timeout_counter += 1;
+            if timeout_counter > 50_000 {
+                log::error!("Erreur : L'Arducam ne répond pas (CAP_DONE jamais reçu) !");
+                return Err("Arducam hardware hang");
+            }
+            Timer::after_micros(10).await;
         }
+        Ok(())
     }
 
     pub async fn get_fifo_length(&mut self) -> u32 {
