@@ -12,6 +12,7 @@ anyhow = "1.0"
 axum = "0.8"
 clap = { version = "4", features = ["derive"] }
 image = "0.25"
+jiff = "0.2"
 rodio = { version = "0.21", optional = true, default-features = false, features = [ "mp3", "playback", "tracing" ] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"

@@ -1,9 +1,16 @@
 use {
     crate::*,
-    tokio::sync::mpsc,
+    tokio::sync::{
+        broadcast::{
+            self,
+            error::RecvError,
+        },
+    },
 };
 
-pub async fn sound_player_task(mut tx: mpsc::Receiver<DetectionEvent>) {
+pub async fn sound_player_task(
+    mut tx: broadcast::Receiver<DetectionEvent>,
+) {
     eprintln!("Sound player task started.");
     let ps = PlaySoundCommand {
         // should be in conf soon
@@ -12,7 +19,7 @@ pub async fn sound_player_task(mut tx: mpsc::Receiver<DetectionEvent>) {
     };
     loop {
         match tx.recv().await {
-            Some(_) => {
+            Ok(_) => {
                 match play_sound(&ps).await {
                     Ok(()) => {}
                     Err(SoundError::Interrupted) => {
@@ -25,8 +32,11 @@ pub async fn sound_player_task(mut tx: mpsc::Receiver<DetectionEvent>) {
                     }
                 }
             }
-            None => {
-                eprintln!("Sound player task is terminating.");
+            Err(RecvError::Lagged(count)) => {
+                eprintln!("Sound Player lagged by {} messages.", count);
+            }
+            Err(RecvError::Closed) => {
+                eprintln!("Sound Player task is terminating.");
                 break;
             }
         }

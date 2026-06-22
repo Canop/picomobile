@@ -1,4 +1,5 @@
 mod args;
+mod event_saver;
 mod cam_capture;
 mod cam_tunnel;
 mod command_tunnel;
@@ -13,6 +14,7 @@ pub use {
     move_detector::*,
     pico_ports::*,
     sound::*,
+    event_saver::*,
 };
 
 use {
@@ -48,6 +50,7 @@ use {
 };
 
 pub const START_MOVE_DETECTOR: bool = true;
+pub const SAVE_DETECTION_EVENTS: bool = true; // ignored if START_MOVE_DETECTOR is false
 
 /// Ports used for communication with the Pico
 pub const PICO_PORTS: PicoPorts = PicoPorts {
@@ -95,17 +98,21 @@ async fn serve(
     // video channel
     let video_tx = broadcast::Sender::<Arc<Vec<u8>>>::new(64);
     // move detection channel
-    let (detection_tx, detection_rx) = mpsc::channel::<DetectionEvent>(1);
+    //let (detection_tx, detection_rx) = mpsc::channel::<DetectionEvent>(1);
 
     let car_commands_addr = format!("{car_ip}:{}", PICO_PORTS.command_port);
     tokio::spawn(tunnel_commands_task(car_commands_addr, command_rx));
 
     if START_MOVE_DETECTOR {
         let video_rx = video_tx.subscribe();
+        let detection_tx = broadcast::Sender::<DetectionEvent>::new(1);
+        if SAVE_DETECTION_EVENTS {
+            tokio::spawn(event_saver::event_saver_task(detection_tx.subscribe()));
+        }
+        tokio::spawn(sound::sound_player_task(detection_tx.subscribe()));
         tokio::spawn(move_detector::move_detector_task(video_rx, detection_tx));
     }
 
-    tokio::spawn(sound::sound_player_task(detection_rx));
 
     let car_camera_addr = format!("{car_ip}:{}", PICO_PORTS.image_port);
     tokio::spawn(cam_tunnel::camera_fetcher_task(

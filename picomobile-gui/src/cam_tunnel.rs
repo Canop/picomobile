@@ -51,7 +51,9 @@ pub async fn camera_fetcher_task(
             match tokio::time::timeout(Duration::from_secs(2), read_jpeg_from_stream(stream)).await
             {
                 Ok(Ok(frame)) => {
-                    let _ = tx.send(Arc::new(frame));
+                    if let Err(e) = tx.send(Arc::new(frame)) {
+                        eprintln!("Failed to broadcast frame: {e}");
+                    }
                 }
                 Ok(Err(e)) => {
                     eprintln!(

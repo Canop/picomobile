@@ -1,5 +1,6 @@
 use {
     image::GrayImage,
+    jiff::Timestamp,
     std::{
         collections::VecDeque,
         sync::Arc,
@@ -10,33 +11,33 @@ use {
     },
     tokio::sync::{
         broadcast,
-        mpsc,
     },
 };
 
-const TERMINATE_WHEN_NO_RECEIVERS: bool = true;
-
-#[derive(Debug, Clone, Copy)]
-pub struct DetectionEvent {}
+#[derive(Debug, Clone)]
+pub struct DetectionEvent {
+    pub time: Timestamp,
+    pub images: Vec<Arc<Vec<u8>>>,
+}
 
 /// Configuration constants for tuning detection and performance
-const DECODE_EVERY_N_FRAMES: usize = 5; // Sub-sampling rate
+const DECODE_EVERY_N_FRAMES: usize = 1; // Sub-sampling rate
 const STREAM_GAP_THRESHOLD: Duration = Duration::from_secs(2); // Detects stream stops/restarts
 const PIXEL_THRESHOLD: u8 = 25; // Minimum luminance change to count as change
-const MIN_TRIGGER_PERCENT: usize = 3; // Minimum percentage of changed pixels to trigger detection
-const MAX_TRIGGER_PERCENT: usize = 40; // Cap to ignore sudden room lighting changes
-const MIN_KEEP_PERCENT: usize = 1; // Minimum percentage to keep motion state active
+const MIN_TRIGGER_PERCENT: f32 = 0.1; // Minimum percentage of changed pixels to trigger detection
+const MAX_TRIGGER_PERCENT: f32 = 30.0; // Cap to ignore sudden lighting changes
+const MIN_KEEP_PERCENT: f32 = 0.05; // Minimum percentage to keep motion state active
 
 pub async fn move_detector_task(
     mut rx: broadcast::Receiver<Arc<Vec<u8>>>,
-    tx: mpsc::Sender<DetectionEvent>,
+    tx: broadcast::Sender<DetectionEvent>,
 ) {
     eprintln!("Move detector task started.");
     // Stores the last 2 processed GrayImages for 3-frame differencing
     let mut history: VecDeque<GrayImage> = VecDeque::with_capacity(2);
     let mut frame_count: usize = 0;
     let mut last_recv_time = Instant::now();
-    let mut move_in_progress = false;
+    let mut event: Option<DetectionEvent> = None;
 
     loop {
         match rx.recv().await {
@@ -71,7 +72,7 @@ pub async fn move_detector_task(
                 // Seed the history buffer before attempting comparison
                 if history.len() < 2 {
                     history.push_back(current_frame);
-                    move_in_progress = false;
+                    event = None; // Reset any ongoing event since we don't have enough frames yet
                     continue;
                 }
 
@@ -105,50 +106,56 @@ pub async fn move_detector_task(
                         }
                     }
                 }
-                let change_percent = (changed_pixels * 100) / total_pixels;
+                let change_percent = (changed_pixels as f32 * 100.0) / total_pixels as f32;
 
                 // Cycle the ring buffer history
                 history.pop_front();
                 history.push_back(current_frame);
 
-                if move_in_progress {
-                    if change_percent < MIN_KEEP_PERCENT {
-                        move_in_progress = false;
-                        eprintln!("Move detector: motion ended (change = {change_percent}%)");
-                    }
-                } else {
-                    if change_percent >= MIN_TRIGGER_PERCENT {
-                        if change_percent > MAX_TRIGGER_PERCENT {
-                            eprintln!(
-                                "Move detector: change = {change_percent}% (ignored, too high)"
-                            );
-                        } else {
-                            eprintln!("Move detector: motion started (change = {change_percent}%)");
-                            move_in_progress = true;
-                            let event = DetectionEvent {};
-                            match tx.try_send(event) {
+                match event.take() {
+                    Some(mut e) => {
+                        if change_percent < MIN_KEEP_PERCENT {
+                            eprintln!("Move detector: motion ended (change = {change_percent:.2}%)");
+                            match tx.send(e) {
                                 Ok(_) => {}
-                                Err(tokio::sync::mpsc::error::TrySendError::Full(_)) => {
-                                    eprintln!("BIP! Motion detected!");
+                                Err(_) => {
+                                    eprintln!("Move detector: no receivers -> closing task");
+                                    break;
                                 }
-                                Err(tokio::sync::mpsc::error::TrySendError::Closed(_)) => {
-                                    if TERMINATE_WHEN_NO_RECEIVERS {
-                                        break;
-                                    }
-                                }
+                            }
+                        } else {
+                            eprintln!("Move detector: motion ongoing (change = {change_percent:.2}%)");
+                            e.images.push(jpeg_bytes.clone());
+                            event = Some(e);
+                        }
+                    }
+                    None => {
+                        if change_percent > 0.03 {
+                            eprintln!("Move detector: change = {change_percent:.2}%");
+                        }
+                        if change_percent >= MIN_TRIGGER_PERCENT {
+                            if change_percent > MAX_TRIGGER_PERCENT {
+                                eprintln!(
+                                    "Move detector: change = {change_percent:.2}% (ignored, too high)"
+                                );
+                            } else {
+                                eprintln!("Move detector: motion started (change = {change_percent:.2}%)");
+                                event = Some(DetectionEvent {
+                                    time: Timestamp::now(),
+                                    images: vec![jpeg_bytes.clone()],
+                                });
                             }
                         }
                     }
                 }
             }
-
             Err(broadcast::error::RecvError::Lagged(_)) => {
                 // The task fell behind processing frames. Clear history to
                 // ensure future comparisons aren't bound to stale time gaps.
                 eprintln!("move detector lagged");
                 history.clear();
                 frame_count = 0;
-                move_in_progress = false;
+                event = None; // Reset any ongoing event since we lost frames
             }
             Err(broadcast::error::RecvError::Closed) => {
                 eprintln!("move detector: broadcast channel closed");
