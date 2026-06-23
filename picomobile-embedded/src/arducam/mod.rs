@@ -31,6 +31,7 @@ pub const FIFO_CLEAR_MASK: u8 = 0x01; // Clear FIFO
 pub const FIFO_START_MASK: u8 = 0x02; // Start capture
 pub const BURST_FIFO_READ: u8 = 0x3C; // Burst read command for FIFO
 
+/// Command and control interface for the Arducam Mini Plus camera module (OV2640 sensor).
 pub struct Arducam<'d> {
     address: u16, // I2C address of the Arducam (OV2640 sensor)
     i2c: I2c<'d, I2C0, Async>,
@@ -74,10 +75,10 @@ impl<'d> Arducam<'d> {
         self.write_regs(OV2640_JPEG).await?;
 
         // Set the right resolution
-        //let jpeg_resolution_sequence = OV2640_160x120_JPEG;
-        //let jpeg_resolution_sequence = OV2640_320x240_JPEG; // bug
-        //let jpeg_resolution_sequence = OV2640_352x288_JPEG; // bug
-        let jpeg_resolution_sequence = OV2640_640x480_JPEG;
+        let jpeg_resolution_sequence = OV2640_160x120_JPEG;
+        //let jpeg_resolution_sequence = OV2640_320x240_JPEG;
+        //let jpeg_resolution_sequence = OV2640_400x296_JPEG;
+        //let jpeg_resolution_sequence = OV2640_640x480_JPEG;
         //let jpeg_resolution_sequence = OV2640_1024x768_JPEG;
         self.write_regs(jpeg_resolution_sequence).await?;
 
