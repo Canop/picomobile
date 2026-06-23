@@ -1,7 +1,11 @@
 mod arducam_stream;
 mod ov2640_registers;
+mod resolution;
 
-pub use arducam_stream::*;
+pub use {
+    arducam_stream::*,
+    resolution::*,
+};
 
 use {
     embassy_rp::{
@@ -73,15 +77,21 @@ impl<'d> Arducam<'d> {
         self.write_regs(OV2640_JPEG_INIT).await?;
         self.write_regs(OV2640_YUV422).await?;
         self.write_regs(OV2640_JPEG).await?;
+        Ok(())
+    }
 
-        // Set the right resolution
-        let jpeg_resolution_sequence = OV2640_160x120_JPEG;
-        //let jpeg_resolution_sequence = OV2640_320x240_JPEG;
-        //let jpeg_resolution_sequence = OV2640_400x296_JPEG;
-        //let jpeg_resolution_sequence = OV2640_640x480_JPEG;
-        //let jpeg_resolution_sequence = OV2640_1024x768_JPEG;
-        self.write_regs(jpeg_resolution_sequence).await?;
-
+    /// Set the resolution of the camera by writing the appropriate register sequence.
+    ///
+    /// This must be done after initialization and before capturing images.
+    ///
+    /// The resolution can maybe be changed at any time (not yet tested).
+    pub async fn set_resolution(
+        &mut self,
+        resolution: Resolution,
+    ) -> Result<(), &'static str> {
+        let sequence = resolution.get_sequence();
+        self.write_regs(sequence).await?;
+        Timer::after_millis(30).await; // Wait for the sensor to apply the new settings
         Ok(())
     }
 

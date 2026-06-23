@@ -28,6 +28,12 @@ pub async fn camera_streaming_task(
     }
     info!("Arducam initialized successfully.");
 
+    let resolution = Resolution::R640x480;
+    if let Err(e) = arducam.set_resolution(resolution).await {
+        log::error!("Failed to set Arducam resolution: {e}");
+        return;
+    }
+
     loop {
         let mut socket = TcpSocket::new(stack, &mut rx_buffer, &mut tx_buffer);
         socket.set_timeout(Some(embassy_time::Duration::from_secs(5)));
