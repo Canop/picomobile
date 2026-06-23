@@ -172,16 +172,30 @@ function initializeCam() {
 async function initializeMotionConfig() {
     const res = await fetch('/api/motion-config');
     const config = await res.json();
-    document.getElementById('enable-motion').checked = config.enable_motion_detection;
-    document.getElementById('sound-on-motion').checked = config.sound_on_motion;
-    document.getElementById('save-motion-events').checked = config.save_motion_events;
-
+    const checkboxes = {
+        enable: document.getElementById('enable-motion'),
+        sound: document.getElementById('sound-on-motion'),
+        save: document.getElementById('save-motion-events'),
+    };
+    checkboxes.enable.checked = config.enable_motion_detection;
+    checkboxes.sound.checked = config.sound_on_motion;
+    checkboxes.save.checked = config.save_motion_events;
+    function updateSubChecks() {
+        if (checkboxes.enable.checked) {
+            checkboxes.sound.removeAttribute('disabled');
+            checkboxes.save.removeAttribute('disabled');
+        } else {
+            checkboxes.sound.setAttribute('disabled', 'true');
+            checkboxes.save.setAttribute('disabled', 'true');
+        }
+    }
+    checkboxes.enable.addEventListener('change', updateSubChecks);
     document.getElementById('motion-config-save').addEventListener('click', async () => {
         const status = document.getElementById('motion-config-status');
         const update = {
-            enable_motion_detection: document.getElementById('enable-motion').checked,
-            sound_on_motion: document.getElementById('sound-on-motion').checked,
-            save_motion_events: document.getElementById('save-motion-events').checked,
+            enable_motion_detection: checkboxes.enable.checked,
+            sound_on_motion: checkboxes.sound.checked,
+            save_motion_events: checkboxes.save.checked,
         };
         try {
             const res = await fetch('/api/motion-config', {
@@ -193,12 +207,14 @@ async function initializeMotionConfig() {
                 status.textContent = '✓';
                 setTimeout(() => status.textContent = '', 2000);
             } else {
-                status.textContent = 'Erreur';
+                status.textContent = 'Error saving config';
             }
+            updateSubChecks();
         } catch (e) {
-            status.textContent = 'Erreur réseau';
+            status.textContent = 'network error';
         }
     });
+    updateSubChecks();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
