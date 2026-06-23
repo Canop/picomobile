@@ -26,6 +26,7 @@ const PIXEL_THRESHOLD: u8 = 25; // Minimum luminance change to count as change
 const MIN_TRIGGER_PERCENT: f32 = 0.1; // Minimum percentage of changed pixels to trigger detection
 const MAX_TRIGGER_PERCENT: f32 = 30.0; // Cap to ignore sudden lighting changes
 const MIN_KEEP_PERCENT: f32 = 0.05; // Minimum percentage to keep motion state active
+const MIN_EVENT_IMAGES: usize = 2; // filters out events too short to be meaningful
 const MAX_EVENT_IMAGES: usize = 10; // Max images to store per event to limit memory usage
 
 pub async fn move_detector_task(
@@ -126,11 +127,20 @@ pub async fn move_detector_task(
                             eprintln!(
                                 "Move detector: motion ended (change = {change_percent:.2}%)"
                             );
-                            match tx.send(e) {
-                                Ok(_) => {}
-                                Err(_) => {
-                                    eprintln!("Move detector: no receivers -> closing task");
-                                    break;
+                            if e.images.len() < MIN_EVENT_IMAGES {
+                                eprintln!(
+                                    "Move detector: event ignored (only {} images)",
+                                    e.images.len()
+                                );
+                            } else {
+                                match tx.send(e) {
+                                    Ok(_) => {
+                                        eprintln!("Move detector: event sent to receivers");
+                                    }
+                                    Err(_) => {
+                                        eprintln!("Move detector: no receivers -> closing task");
+                                        break;
+                                    }
                                 }
                             }
                         } else {
