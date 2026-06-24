@@ -6,6 +6,7 @@ use {
     },
     embedded_io_async::Write,
     log::{
+        error,
         info,
         warn,
     },
@@ -21,12 +22,21 @@ pub async fn camera_streaming_task(
     let mut rx_buffer = [0u8; 512]; // TCP buffer for receiving commands from client
     let mut tx_buffer = [0u8; 8192]; // TCP buffer for sending the image to client
     let mut chunk_buffer = [0u8; 2048]; // buffer for the JPEG chunks read from SPI
+    let mut buf = [0; 4096]; // buffer for reading commands from the TCP socket
+
+    let mut current_resolution = None;
 
     if let Err(e) = arducam.init().await {
         log::error!("Arducam initialization failed: {e}");
         return;
     }
     info!("Arducam initialized successfully.");
+
+    let resolution = Resolution::R640x480;
+    if let Err(e) = arducam.set_resolution(resolution).await {
+        log::error!("Failed to set Arducam resolution: {e}");
+        return;
+    }
 
     loop {
         let mut socket = TcpSocket::new(stack, &mut rx_buffer, &mut tx_buffer);
@@ -43,8 +53,40 @@ pub async fn camera_streaming_task(
             socket.remote_endpoint()
         );
 
+        let n = match socket.read(&mut buf).await {
+            Ok(0) => {
+                warn!("read EOF");
+                break;
+            }
+            Ok(n) => n,
+            Err(e) => {
+                warn!("read error: {:?}", e);
+                break;
+            }
+        };
+        let Ok(input) = from_utf8(&buf[..n]) else {
+            warn!("Received non-UTF8 data");
+            continue;
+        };
+        info!("Received command: {}", input.trim());
+        let resolution = match input.trim().parse::<Resolution>() {
+            Ok(res) => res,
+            Err(e) => {
+                warn!("Invalid resolution command: {} (using default)", e);
+                Resolution::default()
+            }
+        };
+        if current_resolution != Some(resolution) {
+            if let Err(e) = arducam.set_resolution(resolution).await {
+                error!("Failed to set Arducam resolution: {e}");
+                continue;
+            }
+            info!("Resolution set to {:?}", resolution);
+            current_resolution = Some(resolution);
+        }
+
         loop {
-            // 1. oder the Arducam to capture an image
+            // 1. order the Arducam to capture an image
             if let Err(e) = arducam.trigger_capture().await {
                 log::error!("Error triggering Arducam capture: {e}");
                 break;
