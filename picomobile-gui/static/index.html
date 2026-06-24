@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <title>La Picomobile</title>
-    <link rel="stylesheet" href="style.css?v=20260622-2">
+    <link rel="stylesheet" href="style.css?v=20260624-5">
 </head>
 <body>
 
@@ -16,17 +16,30 @@
         <button data-action="quit">Reset Pico</button>
     </div>
 
-
     <div class=cam>
         <img id=cam-img>
         <button id=cam-toggle></button>
-        <div id="motion-config">
-            <h3>Motion detection</h3>
-            <label><input type="checkbox" id="enable-motion"> Enable</label>
-            <label><input type="checkbox" id="sound-on-motion"> Sound</label>
-            <label><input type="checkbox" id="save-motion-events"> Save Events</label>
-            <button id="motion-config-save">Apply</button>
-            <span id="motion-config-status"></span>
+        <div id="cam-config">
+            <h3>Camera Settings</h3>
+            <div class=settings-row>
+                <div class=settings-set>
+                    <label>Resolution: <select id="cam-resolution">
+                        <option></option>
+                        <option value="160x120">160x120</option>
+                        <option value="320x240">320x240</option>
+                        <option value="400x296">400x296</option>
+                        <option value="640x480">640x480</option>
+                        <option value="1024x768">1024x768</option>
+                    </select></label>
+                </div>
+                <div class=settings-set>
+                    <label><input type="checkbox" id="enable-motion-detection"> Enable motion detection</label>
+                    <label><input type="checkbox" id="play-sound-on-motion"> Play sound on motion</label>
+                    <label><input type="checkbox" id="save-motion-events"> Save motion events</label>
+                </div>
+            </div>
+            <button id="cam-config-save">Apply</button>
+            <span id="cam-config-status"></span>
         </div>
     </div>
 
@@ -41,7 +54,6 @@
 
 </div>
 
-<script src="app.js?v=20260623-7"></script>
-
+<script src="app.js?v=20260624-10"></script>
 </body>
 </html>

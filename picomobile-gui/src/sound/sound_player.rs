@@ -8,7 +8,7 @@ use {
 
 pub async fn sound_player_task(
     mut event_rx: broadcast::Receiver<DetectionEvent>,
-    config_rx: watch::Receiver<MotionDetectionConfig>,
+    config_rx: watch::Receiver<CamConfig>,
 ) {
     eprintln!("Sound player task started.");
     let ps = PlaySoundCommand {
@@ -20,7 +20,7 @@ pub async fn sound_player_task(
         match event_rx.recv().await {
             Ok(_) => {
                 let config = *config_rx.borrow();
-                if !config.sound_on_motion {
+                if !config.play_sound_on_motion {
                     eprintln!("Motion event detected, but sound playback is disabled. Skipping.");
                     continue;
                 }

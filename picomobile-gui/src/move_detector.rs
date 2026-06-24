@@ -31,7 +31,7 @@ const MAX_EVENT_IMAGES: usize = 10; // Max images to store per event to limit me
 
 pub async fn move_detector_task(
     mut rx: broadcast::Receiver<Arc<Vec<u8>>>,
-    config_rx: watch::Receiver<MotionDetectionConfig>,
+    config_rx: watch::Receiver<CamConfig>,
     tx: broadcast::Sender<DetectionEvent>,
 ) {
     eprintln!("Move detector task started.");

@@ -27,10 +27,15 @@ body {
     padding: 1rem;
     background-color: #fff;
 }
+.cam {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
 .cam img {
     margin: 10px;
 }
-#motion-config {
+#cam-config {
     border: 1px solid #ccc9;
     padding: 1rem;
     background-color: #fff;
@@ -40,28 +45,36 @@ body {
     align-items: flex-start;
     margin: 10px;
 }
-#motion-config h3 {
+#cam-config h3 {
     margin: 0 0 0.2rem;
     font-size: 0.95rem;
     font-weight: 600;
 }
-#motion-config label {
+#cam-config label {
     display: flex;
     align-items: center;
     gap: 0.4rem;
     font-size: 0.95rem;
     cursor: pointer;
 }
-#motion-config-status {
+#cam-config-status {
     font-size: 0.85rem;
     color: green;
 }
+.settings-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    justify-content: space-around;
+}
 button {
     min-width: 120px;
-    min-height: 60px;
-    font-size: 1.1rem;
+    min-height: 50px;
     cursor: pointer;
 }
 .cam button {
     margin: 10px;
+}
+.driving button {
+    font-size: 1.8rem;
 }

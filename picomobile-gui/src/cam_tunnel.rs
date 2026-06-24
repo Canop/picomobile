@@ -6,6 +6,7 @@ use {
     },
     tokio::{
         io::BufReader,
+        io::AsyncWriteExt,
         sync::broadcast,
         time::sleep,
     },
@@ -14,13 +15,14 @@ use {
 /// Fetches images from the car's camera and broadcasts them to all connected clients.
 pub async fn camera_fetcher_task(
     car_addr: String,
+    config_rx: watch::Receiver<CamConfig>,
     tx: broadcast::Sender<Arc<Vec<u8>>>,
     minimal_receivers_for_connection: usize,
 ) {
     let mut opt_stream = None; // TCP stream to the car's camera
 
     loop {
-        // 1. If there's no client, we don't need to connect to the Pico
+        // If there's no client, we don't need to connect to the Pico
         if tx.receiver_count() < minimal_receivers_for_connection {
             if opt_stream.is_some() {
                 eprintln!("Not enough subscribers. Closing connection to Pico.");
@@ -30,13 +32,18 @@ pub async fn camera_fetcher_task(
             continue;
         }
 
-        // 2. When there are clients, we need to ensure we have a connection to the Pico
+        // When there are clients, we need to ensure we have a connection to the Pico
         if opt_stream.is_none() {
             match tokio::net::TcpStream::connect(&car_addr).await {
-                Ok(s) => {
+                Ok(mut s) => {
                     eprintln!("Connected to car camera stream at {car_addr}");
-                    let reader = BufReader::new(s);
-                    opt_stream = Some(reader);
+                    let config = *config_rx.borrow();
+                    let resolution = config.resolution.to_string();
+                    if let Err(e) = s.write_all(resolution.as_bytes()).await {
+                        eprintln!("Failed to send resolution request to car camera: {e}");
+                        continue;
+                    }
+                    opt_stream = Some(BufReader::new(s));
                 }
                 Err(e) => {
                     eprintln!("Failed to connect to car camera at {car_addr}: {e}");
@@ -46,7 +53,7 @@ pub async fn camera_fetcher_task(
             }
         }
 
-        // 3. Read and broadcast images
+        // Read and broadcast images
         if let Some(ref mut stream) = opt_stream {
             match tokio::time::timeout(Duration::from_secs(2), read_jpeg_from_stream(stream)).await
             {

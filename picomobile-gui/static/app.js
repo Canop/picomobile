@@ -14,7 +14,6 @@ async function sendCommand(command) {
             },
             body: JSON.stringify({ command }),
         });
-
         if (!response.ok) {
             console.error(`Command failed: ${command}`);
         }
@@ -27,10 +26,7 @@ function press(action) {
     if (pressed[action]) {
         return;
     }
-
     pressed[action] = true;
-
-    // Immediate transmission for low latency.
     sendCommand(action);
 }
 
@@ -151,7 +147,7 @@ function initializeKeyboard() {
 function initializeCam() {
     let button = document.getElementById('cam-toggle');
     let img = document.getElementById('cam-img');
-    let motion_config = document.getElementById('motion-config');
+    let motion_config = document.getElementById('cam-config');
     function toggleCam() {
         if (img.style.display === 'none') {
             img.style.display = 'block';
@@ -170,35 +166,39 @@ function initializeCam() {
 }
 
 async function initializeMotionConfig() {
-    const res = await fetch('/api/motion-config');
+    const res = await fetch('/api/cam-config?v=' + Date.now());
     const config = await res.json();
-    const checkboxes = {
-        enable: document.getElementById('enable-motion'),
-        sound: document.getElementById('sound-on-motion'),
+    console.log("cam config:", config);
+    const widgets = {
+        resolution: document.getElementById('cam-resolution'),
+        enable: document.getElementById('enable-motion-detection'),
+        sound: document.getElementById('play-sound-on-motion'),
         save: document.getElementById('save-motion-events'),
     };
-    checkboxes.enable.checked = config.enable_motion_detection;
-    checkboxes.sound.checked = config.sound_on_motion;
-    checkboxes.save.checked = config.save_motion_events;
+    widgets.resolution.value = config.resolution;
+    widgets.enable.checked = config.enable_motion_detection;
+    widgets.sound.checked = config.play_sound_on_motion;
+    widgets.save.checked = config.save_motion_events;
     function updateSubChecks() {
-        if (checkboxes.enable.checked) {
-            checkboxes.sound.removeAttribute('disabled');
-            checkboxes.save.removeAttribute('disabled');
+        if (widgets.enable.checked) {
+            widgets.sound.removeAttribute('disabled');
+            widgets.save.removeAttribute('disabled');
         } else {
-            checkboxes.sound.setAttribute('disabled', 'true');
-            checkboxes.save.setAttribute('disabled', 'true');
+            widgets.sound.setAttribute('disabled', 'true');
+            widgets.save.setAttribute('disabled', 'true');
         }
     }
-    checkboxes.enable.addEventListener('change', updateSubChecks);
-    document.getElementById('motion-config-save').addEventListener('click', async () => {
-        const status = document.getElementById('motion-config-status');
+    widgets.enable.addEventListener('change', updateSubChecks);
+    document.getElementById('cam-config-save').addEventListener('click', async () => {
+        const status = document.getElementById('cam-config-status');
         const update = {
-            enable_motion_detection: checkboxes.enable.checked,
-            sound_on_motion: checkboxes.sound.checked,
-            save_motion_events: checkboxes.save.checked,
+            resolution: widgets.resolution.value,
+            enable_motion_detection: widgets.enable.checked,
+            play_sound_on_motion: widgets.sound.checked,
+            save_motion_events: widgets.save.checked,
         };
         try {
-            const res = await fetch('/api/motion-config', {
+            const res = await fetch('/api/cam-config', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(update),
@@ -210,6 +210,13 @@ async function initializeMotionConfig() {
                 status.textContent = 'Error saving config';
             }
             updateSubChecks();
+            if (update.resolution !== config.resolution) {
+                const img = document.getElementById('cam-img');
+                img.src = '';
+                setTimeout(() => {
+                    img.src = '/api/video';
+                }, 1000);
+            }
         } catch (e) {
             status.textContent = 'network error';
         }

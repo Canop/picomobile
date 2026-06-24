@@ -9,7 +9,7 @@ use {
 
 pub async fn event_saver_task(
     mut rx: broadcast::Receiver<DetectionEvent>,
-    config_rx: watch::Receiver<MotionDetectionConfig>,
+    config_rx: watch::Receiver<CamConfig>,
 ) {
     let events_root = PathBuf::from("events");
     if !events_root.exists() {

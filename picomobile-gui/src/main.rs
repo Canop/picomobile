@@ -7,6 +7,7 @@ mod event_saver;
 mod move_detector;
 mod pico_ports;
 mod sound;
+mod resolution;
 
 pub use {
     args::*,
@@ -17,6 +18,7 @@ pub use {
     move_detector::*,
     pico_ports::*,
     sound::*,
+    resolution::*,
 };
 
 use {
@@ -33,7 +35,6 @@ use {
         routing::post,
     },
     clap::Parser,
-    //futures_util::stream::Stream,
     serde::Deserialize,
     std::{
         net::SocketAddr,
@@ -60,8 +61,8 @@ pub const PICO_PORTS: PicoPorts = PicoPorts {
 
 #[derive(Clone)]
 struct AppState {
-    motion_config: Arc<tokio::sync::RwLock<MotionDetectionConfig>>,
-    motion_config_tx: watch::Sender<MotionDetectionConfig>,
+    cam_config_tx: watch::Sender<CamConfig>,
+    cam_config_rx: watch::Receiver<CamConfig>,
     command_tx: mpsc::Sender<String>,
     video_tx: broadcast::Sender<Arc<Vec<u8>>>,
 }
@@ -95,7 +96,7 @@ async fn serve(
     car_ip: &str,
     gui_port: u16,
 ) {
-    let motion_config = MotionDetectionConfig::default();
+    let cam_config = CamConfig::default();
 
     // command channel
     let (command_tx, command_rx) = mpsc::channel::<String>(8);
@@ -103,23 +104,23 @@ async fn serve(
     let video_tx = broadcast::Sender::<Arc<Vec<u8>>>::new(64);
     // motion detection events channel
     let detection_tx = broadcast::Sender::<DetectionEvent>::new(1);
-    // motion detection config updates channel
-    let motion_config_tx = watch::Sender::<MotionDetectionConfig>::new(motion_config);
+    // cam config updates channel
+    let cam_config_tx = watch::Sender::<CamConfig>::new(cam_config);
 
     let car_commands_addr = format!("{car_ip}:{}", PICO_PORTS.command_port);
     tokio::spawn(tunnel_commands_task(car_commands_addr, command_rx));
 
     tokio::spawn(event_saver::event_saver_task(
         detection_tx.subscribe(),
-        motion_config_tx.subscribe(),
+        cam_config_tx.subscribe(),
     ));
     tokio::spawn(sound::sound_player_task(
         detection_tx.subscribe(),
-        motion_config_tx.subscribe(),
+        cam_config_tx.subscribe(),
     ));
     tokio::spawn(move_detector::move_detector_task(
         video_tx.subscribe(),
-        motion_config_tx.subscribe(),
+        cam_config_tx.subscribe(),
         detection_tx,
     ));
 
@@ -131,13 +132,14 @@ async fn serve(
     let minimal_receivers_for_connection = 2; // move detector + at least one GUI client
     tokio::spawn(cam_tunnel::camera_fetcher_task(
         car_camera_addr,
+        cam_config_tx.subscribe(),
         video_tx.clone(),
         minimal_receivers_for_connection,
     ));
 
     let state = AppState {
-        motion_config: Arc::new(tokio::sync::RwLock::new(motion_config)),
-        motion_config_tx,
+        cam_config_rx: cam_config_tx.subscribe(),
+        cam_config_tx,
         command_tx,
         video_tx,
     };
@@ -145,8 +147,8 @@ async fn serve(
     let app = Router::new()
         .route("/api/command", post(send_command))
         .route("/api/video", get(video_stream))
-        .route("/api/motion-config", get(get_motion_config))
-        .route("/api/motion-config", post(update_motion_config))
+        .route("/api/cam-config", get(get_cam_config))
+        .route("/api/cam-config", post(update_cam_config))
         .fallback_service(ServeDir::new("static"))
         .with_state(state);
 
@@ -209,25 +211,18 @@ async fn video_stream(State(state): State<AppState>) -> impl IntoResponse {
         .unwrap()
 }
 
-async fn get_motion_config(State(state): State<AppState>) -> impl IntoResponse {
-    let config = state.motion_config.read().await;
-    Json(config.clone())
+async fn get_cam_config(State(state): State<AppState>) -> impl IntoResponse {
+    let config = state.cam_config_rx.borrow();
+    Json(*config)
 }
 
-async fn update_motion_config(
+async fn update_cam_config(
     State(state): State<AppState>,
-    Json(req): Json<UpdateMotionDetectionConfig>,
+    Json(req): Json<UpdateCamConfig>,
 ) -> impl IntoResponse {
-    state.motion_config_tx.send_modify(|c| {
-        if let Some(v) = req.enable_motion_detection {
-            c.enable_motion_detection = v;
-        }
-        if let Some(v) = req.sound_on_motion {
-            c.sound_on_motion = v;
-        }
-        if let Some(v) = req.save_motion_events {
-            c.save_motion_events = v;
-        }
+    state.cam_config_tx.send_modify(|c| {
+        c.update(req);
     });
-    Json(state.motion_config_tx.borrow().clone())
+    eprintln!("Updated cam config: {:?}", *state.cam_config_tx.borrow());
+    Json(*state.cam_config_tx.borrow())
 }
