@@ -144,41 +144,28 @@ function initializeKeyboard() {
     });
 }
 
-function initializeCam() {
-    let button = document.getElementById('cam-toggle');
+async function initializeCam() {
+    let toggle_button = document.getElementById('cam-toggle');
     let img = document.getElementById('cam-img');
-    let motion_config = document.getElementById('cam-config');
-    function toggleCam() {
-        if (img.style.display === 'none') {
-            img.style.display = 'block';
-            motion_config.style.display = 'block';
-            img.src = "/api/video";
-            button.textContent = 'Close Camera Stream';
-        } else {
-            img.style.display = 'none';
-            motion_config.style.display = 'none';
-            img.src = "";
-            button.textContent = 'Open Camera Stream';
-        }
-    }
-    button.addEventListener('click', toggleCam);
-    toggleCam();
-}
-
-async function initializeMotionConfig() {
-    const res = await fetch('/api/cam-config?v=' + Date.now());
-    const config = await res.json();
-    console.log("cam config:", config);
+    let config_div = document.getElementById('cam-config');
     const widgets = {
         resolution: document.getElementById('cam-resolution'),
         enable: document.getElementById('enable-motion-detection'),
         sound: document.getElementById('play-sound-on-motion'),
         save: document.getElementById('save-motion-events'),
     };
-    widgets.resolution.value = config.resolution;
-    widgets.enable.checked = config.enable_motion_detection;
-    widgets.sound.checked = config.play_sound_on_motion;
-    widgets.save.checked = config.save_motion_events;
+    widgets.enable.addEventListener('change', updateSubChecks);
+    let config;
+    async function fetchConfig() {
+        const res = await fetch('/api/cam-config?v=' + Date.now());
+        config = await res.json();
+        console.log("cam config:", config);
+        widgets.resolution.value = config.resolution;
+        widgets.enable.checked = config.enable_motion_detection;
+        widgets.sound.checked = config.play_sound_on_motion;
+        widgets.save.checked = config.save_motion_events;
+        updateSubChecks();
+    }
     function updateSubChecks() {
         if (widgets.enable.checked) {
             widgets.sound.removeAttribute('disabled');
@@ -188,7 +175,20 @@ async function initializeMotionConfig() {
             widgets.save.setAttribute('disabled', 'true');
         }
     }
-    widgets.enable.addEventListener('change', updateSubChecks);
+    async function toggleCam() {
+        if (img.style.display === 'none') {
+            await fetchConfig();
+            img.style.display = 'block';
+            config_div.style.display = 'block';
+            img.src = "/api/video";
+            toggle_button.textContent = 'Close Camera Stream';
+        } else {
+            img.style.display = 'none';
+            config_div.style.display = 'none';
+            img.src = "";
+            toggle_button.textContent = 'Open Camera Stream';
+        }
+    }
     document.getElementById('cam-config-save').addEventListener('click', async () => {
         const status = document.getElementById('cam-config-status');
         const update = {
@@ -221,13 +221,14 @@ async function initializeMotionConfig() {
             status.textContent = 'network error';
         }
     });
-    updateSubChecks();
+    toggle_button.addEventListener('click', toggleCam);
+    await toggleCam(); // starting with the camera closed
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+
+document.addEventListener('DOMContentLoaded', async () => {
     initializeButtons();
     initializeKeyboard();
-    initializeCam();
-    initializeMotionConfig();
+    await initializeCam();
     repeatLoop();
 });
