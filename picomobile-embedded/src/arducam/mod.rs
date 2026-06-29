@@ -60,7 +60,7 @@ impl<'d> Arducam<'d> {
     }
 
     pub async fn init(&mut self) -> Result<(), &'static str> {
-         let mut spi_ok = false;
+        let mut spi_ok = false;
 
         // Attempts to initialize the SPI bus by writing and reading a test value to a register.
         for _ in 0..10 {
@@ -142,7 +142,9 @@ impl<'d> Arducam<'d> {
             }
             timeout_counter += 1;
             if timeout_counter > 50_000 {
-                log::error!("Arducam hardware hang detected while waiting for capture to complete.");
+                log::error!(
+                    "Arducam hardware hang detected while waiting for capture to complete."
+                );
                 return Err("Arducam hardware hang");
             }
             Timer::after_micros(10).await;

@@ -169,7 +169,10 @@ async fn tick() {
         log::info!("tick {i}");
     }
 }
-async fn blink(led: &mut Output<'static>, n: usize) {
+async fn blink(
+    led: &mut Output<'static>,
+    n: usize,
+) {
     let before = led.is_set_high();
     for _ in 0..n {
         led.set_high();
