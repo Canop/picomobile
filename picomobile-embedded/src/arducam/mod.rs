@@ -60,10 +60,23 @@ impl<'d> Arducam<'d> {
     }
 
     pub async fn init(&mut self) -> Result<(), &'static str> {
-        // SPI bus check: write 0x55 to register 0x00 and read it back
-        self.write_spi_reg(0x00, 0x55).await;
-        if self.read_spi_reg(0x00).await != 0x55 {
-            return Err("Arducam SPI bus check failed!");
+         let mut spi_ok = false;
+
+        // Attempts to initialize the SPI bus by writing and reading a test value to a register.
+        for _ in 0..10 {
+            self.cs.set_high();
+            Timer::after_millis(5).await;
+
+            self.write_spi_reg(0x00, 0x55).await;
+            if self.read_spi_reg(0x00).await == 0x55 {
+                spi_ok = true;
+                break;
+            }
+            Timer::after_millis(20).await;
+        }
+
+        if !spi_ok {
+            return Err("Arducam SPI bus check failed after retries!");
         }
 
         // Initialization of sensor OV2640 via I2C
@@ -129,7 +142,7 @@ impl<'d> Arducam<'d> {
             }
             timeout_counter += 1;
             if timeout_counter > 50_000 {
-                log::error!("Erreur : L'Arducam ne répond pas (CAP_DONE jamais reçu) !");
+                log::error!("Arducam hardware hang detected while waiting for capture to complete.");
                 return Err("Arducam hardware hang");
             }
             Timer::after_micros(10).await;

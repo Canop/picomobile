@@ -126,7 +126,7 @@ async fn driving_task(
                 apply_driving_command(command, &mut motor, &mut servo).await;
             }
             Err(_timeout) => {
-                info!("TIMEOUT");
+                info!("driving TIMEOUT");
                 // Timeout or other command, stop the motor
                 motor.stop().await;
                 // In order not to loop for nothing and consuming CPU,
@@ -169,6 +169,18 @@ async fn tick() {
         log::info!("tick {i}");
     }
 }
+async fn blink(led: &mut Output<'static>, n: usize) {
+    let before = led.is_set_high();
+    for _ in 0..n {
+        led.set_high();
+        Timer::after_millis(150).await;
+        led.set_low();
+        Timer::after_millis(150).await;
+    }
+    if before {
+        led.set_high();
+    }
+}
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
@@ -178,10 +190,14 @@ async fn main(spawner: Spawner) {
     let usb_driver = UsbDriver::new(p.USB, Irqs);
     spawner.spawn(expect(logger_task(usb_driver)).await);
 
-    info!("Starting...");
-
     // LED on pin 27 of the Kitronik 5331, active=high
     let mut led = Output::new(p.PIN_27, Level::Low);
+
+    blink(&mut led, 1).await;
+    Timer::after_millis(1000).await;
+
+    blink(&mut led, 1).await;
+    info!("Starting...");
 
     // Motor on pins Motor1 of the Kitronik 5331, which are mapped
     // to pins 2 and 3 of the RP2040
@@ -201,11 +217,12 @@ async fn main(spawner: Spawner) {
     };
 
     // Configuration of the Arducam (pins from GP16 to GP21)
-    let i2c_config = embassy_rp::i2c::Config::default();
+    let mut i2c_config = embassy_rp::i2c::Config::default();
+    i2c_config.frequency = 100_000;
     let i2c0 = embassy_rp::i2c::I2c::new_async(p.I2C0, p.PIN_21, p.PIN_20, Irqs, i2c_config);
 
     let mut spi_config = embassy_rp::spi::Config::default();
-    spi_config.frequency = 8_000_000; // 8 MHz pour un vidage rapide de la FIFO
+    spi_config.frequency = 8_000_000; // 8 MHz is possible but may lead to parasites
     let spi0 = embassy_rp::spi::Spi::new(
         p.SPI0, p.PIN_18, p.PIN_19, p.PIN_16, p.DMA_CH3, p.DMA_CH4, Irqs, spi_config,
     );
@@ -243,7 +260,8 @@ async fn main(spawner: Spawner) {
 
     control.init(clm).await;
     control
-        .set_power_management(cyw43::PowerManagementMode::PowerSave)
+        //.set_power_management(cyw43::PowerManagementMode::PowerSave)
+        .set_power_management(cyw43::PowerManagementMode::Performance)
         .await;
 
     let config = Config::dhcpv4(Default::default());
@@ -260,8 +278,10 @@ async fn main(spawner: Spawner) {
         seed,
     );
 
+    Timer::after_millis(150).await;
     spawner.spawn(expect(net_task(runner)).await);
 
+    Timer::after_millis(150).await;
     spawner.spawn(expect(camera_streaming_task(stack, arducam)).await);
 
     while let Err(err) = control
@@ -290,9 +310,7 @@ async fn main(spawner: Spawner) {
 
         control.gpio_set(0, false).await;
         info!("Listening on TCP:1234...");
-        led.set_high();
-        Timer::after_millis(100).await;
-        led.set_low();
+        blink(&mut led, 1).await;
         if let Err(e) = socket.accept(1234).await {
             warn!("accept error: {:?}", e);
             continue;
@@ -372,12 +390,7 @@ async fn main(spawner: Spawner) {
                 // we blink the LED a few times to give the user a visual feedback that the
                 // command was received, and so that the log can reach tio before the reset
                 // happens
-                for _ in 0..5 {
-                    led.set_high();
-                    Timer::after_millis(200).await;
-                    led.set_low();
-                    Timer::after_millis(200).await;
-                }
+                blink(&mut led, 5).await;
                 reset_to_usb_boot(0, 0);
             }
         }

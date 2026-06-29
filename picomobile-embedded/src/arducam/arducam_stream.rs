@@ -1,5 +1,6 @@
 use {
     crate::*,
+    embassy_futures::yield_now,
     embassy_net::{
         Stack,
         tcp::TcpSocket,
@@ -148,6 +149,7 @@ pub async fn camera_streaming_task(
                 //info!("Sent {} bytes to client.", to_send);
 
                 total_bytes -= to_read as u32;
+                yield_now().await; // Yield to allow other tasks to run
             }
 
             // Release the SPI chip select line after the burst read
