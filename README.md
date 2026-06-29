@@ -2,7 +2,9 @@
 
 This repository contains the code of the Pico-Mobile as described in [https://dystroy.org/blog/picomobile](https://dystroy.org/blog/picomobile)
 
-![La Picon-Mobile](doc/picon-mobile.jpg)
+![La Picon-Mobile](doc/picomobile-arducam.jpg)
+
+![GUI](doc/picomobile-gui.png)
 
 
 **Warning:** Below this point, this readme isn't up to date, the code changes too fast. But the code does do everything which is in the blog article (and much more, like camera control)
