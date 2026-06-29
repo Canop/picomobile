@@ -99,6 +99,15 @@ pub async fn move_detector_task(
                 let mut changed_pixels = 0;
                 let total_pixels = (width * height) as usize;
 
+                // check dimensions are same
+                if oldest.dimensions() != (width, height) || middle.dimensions() != (width, height) {
+                    eprintln!("Move detector: frame dimensions changed");
+                    history.clear();
+                    frame_count = 0;
+                    event = None; // Reset any ongoing event since we lost frames
+                    continue;
+                }
+
                 // Compute pixel-level intersection
                 for x in 0..width {
                     for y in 0..height {

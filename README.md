@@ -4,8 +4,8 @@ This repository contains the code of the Pico-Mobile as described in [https://dy
 
 ![La Picon-Mobile](doc/picon-mobile.jpg)
 
-**Warning:** Below this point, this readme isn't up to date, the code changes too fast. But the code does do everything which is in the blog article (and much more, like camera control)
 
+**Warning:** Below this point, this readme isn't up to date, the code changes too fast. But the code does do everything which is in the blog article (and much more, like camera control)
 
 # Material (computers not included)
 
@@ -23,7 +23,7 @@ This repository contains the code of the Pico-Mobile as described in [https://dy
 - resistance and diode (longer arm first) connected from Kitronik's GP27 to its GND
 - Pico <-> Kitronik: GP2, GP3, GP6, GP7, GND
 
-## Arducam <-> Pico wiring:
+## Arducam <-> Pico wiring (for an extension that's not in the article):
 
 Arducam (left to right) | Pico            | Purpose
 ------------------------|-----------------|----------------------
