@@ -6,10 +6,9 @@ This repository contains the code of the Pico-Mobile as described in [https://dy
 
 ![GUI](doc/picomobile-gui.png)
 
-
 **Warning:** Below this point, this readme isn't up to date, the code changes too fast. But the code does do everything which is in the blog article (and much more, like camera control)
 
-# Material (computers not included)
+# Material
 
 - Raspberry Pico WH
 - breadboard
@@ -17,15 +16,17 @@ This repository contains the code of the Pico-Mobile as described in [https://dy
 - resistor 220 Ohm
 - diode
 - jumper cables
-- arducam
+- Mini module Camera Arducam Shield OV2640 2MP Plus
+- MB102 based alimentation module
 
 # Hardware Setup
 
 - Pico WH mounted on the Kitronik 5331
 - resistance and diode (longer arm first) connected from Kitronik's GP27 to its GND
 - Pico <-> Kitronik: GP2, GP3, GP6, GP7, GND
+- Alimentation module receiving power from Lego batteries and powering the Pico (only) in 5V
 
-## Arducam <-> Pico wiring (for an extension that's not in the article):
+## Arducam <-> Pico wiring
 
 	Arducam (left to right) | Pico            | Purpose
 	------------------------|-----------------|----------------------
@@ -55,7 +56,7 @@ This repository contains the code of the Pico-Mobile as described in [https://dy
 				 |       | (21) GP16 [SPI0 RX]  <---- [ Arducam MISO ]
 				 +-------+
 
-Note for later: if we have another power source (eg a MB102) we connect the Arducam VCC to that power source directly
+![arducam-pico](doc/arducam-pico-wiring.png)
 
 # Software setup
 
