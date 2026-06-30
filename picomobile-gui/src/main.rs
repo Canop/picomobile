@@ -152,7 +152,8 @@ async fn serve(
         .fallback_service(ServeDir::new("static"))
         .with_state(state);
 
-    let gui_addr = SocketAddr::from(([127, 0, 0, 1], gui_port));
+    //let gui_addr = SocketAddr::from(([127, 0, 0, 1], gui_port));
+    let gui_addr = SocketAddr::from(([0, 0, 0, 0], gui_port));
 
     println!("GUI available on http://{}", gui_addr);
 

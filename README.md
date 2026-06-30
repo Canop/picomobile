@@ -25,29 +25,33 @@ This repository contains the code of the Pico-Mobile as described in [https://dy
 
 ## Arducam <-> Pico wiring (for an extension that's not in the article):
 
-Arducam (left to right) | Pico            | Purpose
-------------------------|-----------------|----------------------
-CS                      | GP17 (SPIO CSn) | SPI chip select
-MOSI                    | GP19 (SPIO TX)  | SPI Data - master output slave input
-MISO                    | GP16 (SPIO RX)  | SPI Data - master input slave output
-SCK  (SCLK)             | GP18 (SPIO SCK) | SPI clock
-GND                     | GND             | power ground
-VCC                     | 3V3             | powers the Arducam
-SDA                     | GP20 (I2C0 SDA) | configuration
-SCL                     | GP21 (I2C0 SCL) | I2C clock
+	Arducam (left to right) | Pico            | Purpose
+	------------------------|-----------------|----------------------
+	CS                      | GP17 (SPIO CSn) | SPI chip select
+	MOSI                    | GP19 (SPIO TX)  | SPI Data - master output slave input
+	MISO                    | GP16 (SPIO RX)  | SPI Data - master input slave output
+	SCK  (SCLK)             | GP18 (SPIO SCK) | SPI clock
+	GND                     | GND             | power ground
+	VCC                     | 3V3 out         | powers the Arducam
+	SDA                     | GP20 (I2C0 SDA) | configuration
+	SCL                     | GP21 (I2C0 SCL) | I2C clock
 
-	         +-USB-+
-	         |     |
-	         |     |
-	         |     | (28) GND
-	         |     | (27) GP21 [I2C0 SCL] <---- [ Arducam SCL ]
-	         |Pico | (26) GP20 [I2C0 SDA] <---- [ Arducam SDA ]
-	         |     | (25) GP19 [SPI0 TX]  <---- [ Arducam MOSI ]
-	         |     | (24) GP18 [SPI0 SCK] <---- [ Arducam SCLK ]
-	         |     | (23) GND
-	         |     | (22) GP17 [SPI0 CSn] <---- [ Arducam CS ]
-	         |     | (21) GP16 [SPI0 RX]  <---- [ Arducam MISO ]
-	         +-----+
+				 +--USB--+
+				 |       |
+				 |       |
+				 |       | (36) 3V3 Out         <---- [ Arducam VCC ]
+				 |       |
+				 |       |
+				 |       |
+				 |       | (28) GND
+				 |       | (27) GP21 [I2C0 SCL] <---- [ Arducam SCL ]
+				 | Pico  | (26) GP20 [I2C0 SDA] <---- [ Arducam SDA ]
+				 |       | (25) GP19 [SPI0 TX]  <---- [ Arducam MOSI ]
+				 |       | (24) GP18 [SPI0 SCK] <---- [ Arducam SCLK ]
+				 |       | (23) GND
+				 |       | (22) GP17 [SPI0 CSn] <---- [ Arducam CS ]
+				 |       | (21) GP16 [SPI0 RX]  <---- [ Arducam MISO ]
+				 +-------+
 
 Note for later: if we have another power source (eg a MB102) we connect the Arducam VCC to that power source directly
 
