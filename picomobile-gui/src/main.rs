@@ -84,12 +84,9 @@ async fn main() {
         return;
     }
 
-    if let Some(gui_port) = args.gui_port {
-        println!("Starting GUI on port {}", gui_port);
-        serve(&args.car_ip, gui_port).await;
-    }
-
-    eprintln!("Not capturing, and not serving GUI. Exiting.");
+    let gui_port = args.gui_port.unwrap_or(8083);
+    println!("Starting GUI on port {}", gui_port);
+    serve(&args.car_ip, gui_port).await;
 }
 
 async fn serve(
