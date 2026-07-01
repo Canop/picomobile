@@ -8,7 +8,7 @@ This repository contains the code of the Pico-Mobile as described in [https://dy
 
 **Warning:** I'm still experimenting with the hardware in the FPV configuration, currently trying to improve the power setup (the servo isn't always receiving enough power right now so I'm trying with a buck converter instead of the MB102). The software part isn't expected to change though. It works for both the first Picomobile described in the article (without arducam) and the new one whose hardware setup isn't yet published.
 
-![archi](archi.png)
+![archi](doc/archi.png)
 
 # Material
 
