@@ -5,6 +5,11 @@ const pressed = {
     right: false,
 };
 
+// The level given to the servo controller for steering, in [1,7]. The higher the number,
+//   the more aggressive the steering is supposed to be but the values in the Servo
+//   struct aren't well calibrated so some tuning may be needed.
+const STEERING_LEVEL = 4;
+
 async function sendCommand(command) {
     try {
         const response = await fetch('/api/command', {
@@ -63,9 +68,9 @@ async function repeatLoop() {
         }
 
         if (pressed.left) {
-            sendCommand('left');
+            sendCommand(`left ${STEERING_LEVEL}`);
         } else if (pressed.right) {
-            sendCommand('right');
+            sendCommand(`right ${STEERING_LEVEL}`);
         }
 
         await new Promise(resolve => setTimeout(resolve, 50));

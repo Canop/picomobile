@@ -6,8 +6,8 @@ mod config;
 mod event_saver;
 mod move_detector;
 mod pico_ports;
-mod sound;
 mod resolution;
+mod sound;
 
 pub use {
     args::*,
@@ -17,8 +17,8 @@ pub use {
     event_saver::*,
     move_detector::*,
     pico_ports::*,
-    sound::*,
     resolution::*,
+    sound::*,
 };
 
 use {
@@ -31,8 +31,10 @@ use {
             IntoResponse,
             Response,
         },
-        routing::get,
-        routing::post,
+        routing::{
+            get,
+            post,
+        },
     },
     clap::Parser,
     serde::Deserialize,
@@ -45,10 +47,12 @@ use {
         mpsc,
         watch,
     },
-    tokio_stream::StreamExt,
-    tokio_stream::wrappers::{
-        BroadcastStream,
-        errors::BroadcastStreamRecvError,
+    tokio_stream::{
+        StreamExt,
+        wrappers::{
+            BroadcastStream,
+            errors::BroadcastStreamRecvError,
+        },
     },
     tower_http::services::ServeDir,
 };

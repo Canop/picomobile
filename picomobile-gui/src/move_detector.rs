@@ -100,7 +100,8 @@ pub async fn move_detector_task(
                 let total_pixels = (width * height) as usize;
 
                 // check dimensions are same
-                if oldest.dimensions() != (width, height) || middle.dimensions() != (width, height) {
+                if oldest.dimensions() != (width, height) || middle.dimensions() != (width, height)
+                {
                     eprintln!("Move detector: frame dimensions changed");
                     history.clear();
                     frame_count = 0;

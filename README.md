@@ -6,7 +6,9 @@ This repository contains the code of the Pico-Mobile as described in [https://dy
 
 ![GUI](doc/picomobile-gui.png)
 
-**Warning:** Below this point, this readme isn't up to date, the code changes too fast. But the code does do everything which is in the blog article (and much more, like camera control)
+**Warning:** I'm still experimenting with the hardware in the FPV configuration, currently trying to improve the power setup (the servo isn't always receiving enough power right now so I'm trying with a buck converter instead of the MB102). The software part isn't expected to change though. It works for both the first Picomobile described in the article (without arducam) and the new one whose hardware setup isn't yet published.
+
+![archi](archi.png)
 
 # Material
 
