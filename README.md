@@ -1,12 +1,13 @@
 
 
-This repository contains the code of the Pico-Mobile as described in [https://dystroy.org/blog/picomobile](https://dystroy.org/blog/picomobile)
+This repository contains the code which runs either
 
-![La Picon-Mobile](doc/picomobile-arducam.jpg)
+- the Picomobile as described in [https://dystroy.org/blog/picomobile](https://dystroy.org/blog/picomobile)
+- the FPV Picomobile as described in [https://dystroy.org/blog/picamobile](https://dystroy.org/blog/picamobile)
+
+![La Picon-Mobile](doc/picamobile-02.jpg)
 
 ![GUI](doc/picomobile-gui.png)
-
-**Warning:** I'm still experimenting with the hardware in the FPV configuration, currently trying to improve the power setup (the servo isn't always receiving enough power right now so I'm trying with a buck converter instead of the MB102). The software part isn't expected to change though. It works for both the first Picomobile described in the article (without arducam) and the new one whose hardware setup isn't yet published.
 
 ![archi](doc/archi.png)
 
@@ -17,16 +18,19 @@ This repository contains the code of the Pico-Mobile as described in [https://dy
 - cable USB data de Raspberry
 - resistor 220 Ohm
 - diode
-- jumper cables
+- jumper cables and capacitors
 - Mini module Camera Arducam Shield OV2640 2MP Plus
-- MB102 based alimentation module
+- buck converter
+- Schottky diode
+
+![from above](picomobile-from-above.png)
 
 # Hardware Setup
 
 - Pico WH mounted on the Kitronik 5331
 - resistance and diode (longer arm first) connected from Kitronik's GP27 to its GND
 - Pico <-> Kitronik: GP2, GP3, GP6, GP7, GND
-- Alimentation module receiving power from Lego batteries and powering the Pico (only) in 5V
+- Buck converter module receiving power from Lego batteries and powering the Pico (only) in 5V
 
 ## Arducam <-> Pico wiring
 
