@@ -23,14 +23,14 @@ This repository contains the code which runs either
 - buck converter
 - Schottky diode
 
-![from above](picomobile-from-above.png)
+![from above](doc/picomobile-from-above.png)
 
 # Hardware Setup
 
 - Pico WH mounted on the Kitronik 5331
 - resistance and diode (longer arm first) connected from Kitronik's GP27 to its GND
 - Pico <-> Kitronik: GP2, GP3, GP6, GP7, GND
-- Buck converter module receiving power from Lego batteries and powering the Pico (only) in 5V
+- Buck converter module receiving power from Lego batteries and powering the Pico (only) in 5V, protected with the Schottky diode
 
 ## Arducam <-> Pico wiring
 
