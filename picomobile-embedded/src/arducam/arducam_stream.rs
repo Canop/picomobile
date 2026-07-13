@@ -13,7 +13,7 @@ use {
     },
 };
 
-const WAIT_BETWEEN_FRAMES_MS: u64 = 100;
+const WAIT_BETWEEN_FRAMES_MS: u64 = 20;
 
 #[embassy_executor::task]
 pub async fn camera_streaming_task(

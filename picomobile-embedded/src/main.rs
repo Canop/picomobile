@@ -225,7 +225,7 @@ async fn main(spawner: Spawner) {
     let i2c0 = embassy_rp::i2c::I2c::new_async(p.I2C0, p.PIN_21, p.PIN_20, Irqs, i2c_config);
 
     let mut spi_config = embassy_rp::spi::Config::default();
-    spi_config.frequency = 8_000_000; // 8 MHz is possible but may lead to parasites
+    spi_config.frequency = 4_000_000; // 8 MHz is possible but may lead to parasites
     let spi0 = embassy_rp::spi::Spi::new(
         p.SPI0, p.PIN_18, p.PIN_19, p.PIN_16, p.DMA_CH3, p.DMA_CH4, Irqs, spi_config,
     );
