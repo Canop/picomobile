@@ -1,16 +1,44 @@
 use {
     crate::*,
+    jiff::Timestamp,
     std::{
         sync::Arc,
         time::Duration,
     },
     tokio::{
-        io::BufReader,
-        io::AsyncWriteExt,
+        io::{
+            AsyncWriteExt,
+            BufReader,
+        },
+        net::TcpStream,
         sync::broadcast,
         time::sleep,
     },
 };
+
+struct Stream {
+    started: Timestamp,
+    reader: BufReader<TcpStream>,
+    frame_count: usize,
+}
+
+impl Stream {
+    fn new(tcp_stream: TcpStream) -> Self {
+        Self {
+            started: Timestamp::now(),
+            reader: BufReader::new(tcp_stream),
+            frame_count: 0,
+        }
+    }
+    fn fps(&self) -> f32 {
+        let elapsed = Timestamp::now().duration_since(self.started).as_secs_f32();
+        if elapsed > 0.0 {
+            self.frame_count as f32 / elapsed
+        } else {
+            0.0
+        }
+    }
+}
 
 /// Fetches images from the car's camera and broadcasts them to all connected clients.
 pub async fn camera_fetcher_task(
@@ -19,21 +47,25 @@ pub async fn camera_fetcher_task(
     tx: broadcast::Sender<Arc<Vec<u8>>>,
     minimal_receivers_for_connection: usize,
 ) {
-    let mut opt_stream = None; // TCP stream to the car's camera
+    let mut stream: Option<Stream> = None;
 
     loop {
         // If there's no client, we don't need to connect to the Pico
         if tx.receiver_count() < minimal_receivers_for_connection {
-            if opt_stream.is_some() {
+            if let Some(s) = stream.take() {
                 eprintln!("Not enough subscribers. Closing connection to Pico.");
-                opt_stream = None;
+                eprintln!(
+                    "Ending a stream of {} frames at {:.2} fps",
+                    s.frame_count,
+                    s.fps()
+                );
             }
             sleep(Duration::from_millis(500)).await;
             continue;
         }
 
         // When there are clients, we need to ensure we have a connection to the Pico
-        if opt_stream.is_none() {
+        if stream.is_none() {
             match tokio::net::TcpStream::connect(&car_addr).await {
                 Ok(mut s) => {
                     eprintln!("Connected to car camera stream at {car_addr}");
@@ -43,7 +75,7 @@ pub async fn camera_fetcher_task(
                         eprintln!("Failed to send resolution request to car camera: {e}");
                         continue;
                     }
-                    opt_stream = Some(BufReader::new(s));
+                    stream = Some(Stream::new(s));
                 }
                 Err(e) => {
                     eprintln!("Failed to connect to car camera at {car_addr}: {e}");
@@ -54,10 +86,12 @@ pub async fn camera_fetcher_task(
         }
 
         // Read and broadcast images
-        if let Some(ref mut stream) = opt_stream {
-            match tokio::time::timeout(Duration::from_secs(2), read_jpeg_from_stream(stream)).await
+        if let Some(ref mut s) = stream {
+            match tokio::time::timeout(Duration::from_secs(2), read_jpeg_from_stream(&mut s.reader))
+                .await
             {
                 Ok(Ok(frame)) => {
+                    s.frame_count += 1;
                     if let Err(e) = tx.send(Arc::new(frame)) {
                         eprintln!("Failed to broadcast frame: {e}");
                     }
@@ -66,13 +100,13 @@ pub async fn camera_fetcher_task(
                     eprintln!(
                         "Pico camera connection lost (read error): {e}. Attempting to reconnect..."
                     );
-                    opt_stream = None;
+                    stream = None;
                 }
                 Err(_timeout_error) => {
                     eprintln!(
                         "Pico camera connection timed out (no data received). Reconnecting..."
                     );
-                    opt_stream = None; // triggers reconnection
+                    stream = None; // triggers reconnection
                 }
             }
         }

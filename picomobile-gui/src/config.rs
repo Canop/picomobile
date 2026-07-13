@@ -30,7 +30,10 @@ pub struct UpdateCamConfig {
 
 impl CamConfig {
     /// Update the configuration with the provided values.
-    pub fn update(&mut self, update: UpdateCamConfig) {
+    pub fn update(
+        &mut self,
+        update: UpdateCamConfig,
+    ) {
         if let Some(resolution) = update.resolution {
             self.resolution = resolution;
         }

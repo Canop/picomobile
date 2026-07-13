@@ -1,12 +1,15 @@
 
 
-This repository contains the code of the Pico-Mobile as described in [https://dystroy.org/blog/picomobile](https://dystroy.org/blog/picomobile)
+This repository contains the code which runs either
 
-![La Picon-Mobile](doc/picomobile-arducam.jpg)
+- the Picomobile as described in [https://dystroy.org/blog/picomobile](https://dystroy.org/blog/picomobile)
+- the FPV Picomobile as described in [https://dystroy.org/blog/picamobile](https://dystroy.org/blog/picamobile)
+
+![La Picon-Mobile](doc/picamobile-02.jpg)
 
 ![GUI](doc/picomobile-gui.png)
 
-**Warning:** Below this point, this readme isn't up to date, the code changes too fast. But the code does do everything which is in the blog article (and much more, like camera control)
+![archi](doc/archi.png)
 
 # Material
 
@@ -15,16 +18,19 @@ This repository contains the code of the Pico-Mobile as described in [https://dy
 - cable USB data de Raspberry
 - resistor 220 Ohm
 - diode
-- jumper cables
+- jumper cables and capacitors
 - Mini module Camera Arducam Shield OV2640 2MP Plus
-- MB102 based alimentation module
+- buck converter
+- Schottky diode
+
+![from above](doc/picomobile-from-above.png)
 
 # Hardware Setup
 
 - Pico WH mounted on the Kitronik 5331
 - resistance and diode (longer arm first) connected from Kitronik's GP27 to its GND
 - Pico <-> Kitronik: GP2, GP3, GP6, GP7, GND
-- Alimentation module receiving power from Lego batteries and powering the Pico (only) in 5V
+- Buck converter module receiving power from Lego batteries and powering the Pico (only) in 5V, protected with the Schottky diode
 
 ## Arducam <-> Pico wiring
 
@@ -69,7 +75,7 @@ Embassy project in ../../embassy, on commit 46288501e (unfortunately, I couldn't
 
 WIFI_SSID and WIFI_PASSWORD env vars must be set for compilation, for example in env.sh
 
-# Connect the Pico on first installation or crash
+# Connect the Pico for first installation or reinstallation
 
 With USB cable connecting Mac to Pico:
 
@@ -96,8 +102,6 @@ On launching, the Pico registers and dumps its IP:
 
 Connect with `nc`, eg `nc 192.168.1.24 1234` and send commands finished by enter
 
-![repl](pico-wifi-repl.png)
-
 Commands:
 * blink n times, eg `b 5`
 * run the Lego motor n milliseconds, eg `g 150` or `g -2000`
@@ -117,7 +121,7 @@ After handling this command the Pico should be mounted as RPI-RP2 on the mac and
 
 # picomobile-gui
 
-The picomobile-gui program launches a serve which allows web-based control of the Pico:
+The picomobile-gui program launches a server which allows web-based control of the Pico:
 - driving the car with the keyboard's arrow keys
 - doing a reset (same than using netcat to send `q`)
 - viewing the camera image flow
