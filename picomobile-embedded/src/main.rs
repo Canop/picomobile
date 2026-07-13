@@ -88,22 +88,14 @@ use {
 
 bind_interrupts!(struct Irqs {
     PIO0_IRQ_0 => InterruptHandler<PIO0>;
-    // Tous les canaux DMA du RP2040 partagent la même interruption matérielle (DMA_IRQ_0)
     DMA_IRQ_0 => dma::InterruptHandler<DMA_CH0>,
                  dma::InterruptHandler<DMA_CH1>,
                  dma::InterruptHandler<DMA_CH2>,
                  dma::InterruptHandler<DMA_CH3>,
                  dma::InterruptHandler<DMA_CH4>;
     USBCTRL_IRQ => UsbIrqHandler<USB>;
-    // Gestionnaires d'interruptions propres aux périphériques I2C et SPI
     I2C0_IRQ => i2c::InterruptHandler<I2C0>;
 });
-
-// bind_interrupts!(struct Irqs {
-//     PIO0_IRQ_0 => InterruptHandler<PIO0>;
-//     DMA_IRQ_0 => dma::InterruptHandler<DMA_CH0>, dma::InterruptHandler<DMA_CH1>;
-//     USBCTRL_IRQ => UsbIrqHandler<USB>;
-// });
 
 static COMMAND_CHANNEL: Channel<CriticalSectionRawMutex, DrivingCommand, 2> = Channel::new();
 
@@ -263,7 +255,6 @@ async fn main(spawner: Spawner) {
 
     control.init(clm).await;
     control
-        //.set_power_management(cyw43::PowerManagementMode::PowerSave)
         .set_power_management(cyw43::PowerManagementMode::Performance)
         .await;
 
@@ -300,8 +291,7 @@ async fn main(spawner: Spawner) {
     info!("waiting for DHCP...");
     stack.wait_config_up().await;
 
-    // And now we can use it!
-    info!("Stack is up!");
+    info!("Network stack is up!");
 
     let mut rx_buffer = [0; 4096];
     let mut tx_buffer = [0; 4096];

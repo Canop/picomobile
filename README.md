@@ -71,7 +71,7 @@ Embassy project in ../../embassy, on commit 46288501e (unfortunately, I couldn't
 
 WIFI_SSID and WIFI_PASSWORD env vars must be set for compilation, for example in env.sh
 
-# Connect the Pico on first installation or crash
+# Connect the Pico for first installation or reinstallation
 
 With USB cable connecting Mac to Pico:
 
@@ -97,8 +97,6 @@ On launching, the Pico registers and dumps its IP:
     Listening on TCP:1234...
 
 Connect with `nc`, eg `nc 192.168.1.24 1234` and send commands finished by enter
-
-![repl](pico-wifi-repl.png)
 
 Commands:
 * blink n times, eg `b 5`
