@@ -121,7 +121,7 @@ After handling this command the Pico should be mounted as RPI-RP2 on the mac and
 
 # picomobile-gui
 
-The picomobile-gui program launches a serve which allows web-based control of the Pico:
+The picomobile-gui program launches a server which allows web-based control of the Pico:
 - driving the car with the keyboard's arrow keys
 - doing a reset (same than using netcat to send `q`)
 - viewing the camera image flow
